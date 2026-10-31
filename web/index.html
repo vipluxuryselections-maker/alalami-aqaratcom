@@ -1,0 +1,305 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بورصة العالمي الدولية للأصول والعقارات</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #2563eb;
+            --border-color: #334155;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .legal-notice {
+            background: #7f1d1d;
+            color: #fca5a5;
+            padding: 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            font-size: 13px;
+            border: 1px solid #f87171;
+            line-height: 1.6;
+        }
+
+        .section-box {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .locked-badge {
+            background: #b45309;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        /* تصميم نظام الشات المطور */
+        .chat-container {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #0f172a;
+            height: 250px;
+            display: flex;
+            flex-direction: column;
+            margin-top: 15px;
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .msg {
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 70%;
+            font-size: 14px;
+        }
+
+        .msg.sent {
+            background: #1e3a8a;
+            align-self: flex-end;
+        }
+
+        .msg.alert {
+            background: #7f1d1d;
+            color: #fca5a5;
+            align-self: center;
+            font-weight: bold;
+            border: 1px solid #f87171;
+        }
+
+        .chat-input-area {
+            display: flex;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .chat-input-area input {
+            flex-grow: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            color: white;
+            outline: none;
+        }
+
+        .chat-input-area button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        input,
+        select {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            background: #0f172a;
+            color: white;
+            width: 100%;
+            margin-top: 5px;
+            box-sizing: border-box;
+        }
+
+        .grid-two {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- بند خلو المسؤولية الصارم والظاهر بقوة -->
+        <div class="legal-notice">
+            ⚖️ <strong>بند خلو المسؤولية القانونية الصارم:</strong> منصة العالمي للاستثمار والعقارات هي وسيط تقني فقط
+            يربط الأطراف. لا تتحمل المنصة أي مسؤولية قانونية، مالية، جنائية، أو التزام لأي طرف من الملاك، العملاء،
+            السعاة المعتمدين وغير المعتمدين، شركات التمويل، البنوك، أو تجار الأصول (الذهب، الأسهم، السكراب). توقيع عقد
+            الوساطة وسداد السعي البنكي هو مسؤولية الأطراف المشتركة تماماً.
+        </div>
+
+        <!-- بوابة تجارة الأصول المتعددة وقفل السعي -->
+        <div class="section-box">
+            <h2>🛒 بورصة تجارة الأصول المتعددة الذكية</h2>
+            <div class="locked-badge">🔒 نظام الأمان نشط: أرقام التواصل والدردشات المباشرة مخفية ومغلقة برمجياً حتى سداد
+                السعي للمنصة لحفظ الحقوق</div>
+
+            <div class="grid-two">
+                <div>
+                    <label>اختر نوع الأصل الاستثماري:</label>
+                    <select id="asset-type">
+                        <option value="realestate_sale">عقارات - صفقات بيع (1%)</option>
+                        <option value="realestate_rent">عقارات - إيجار سنوي (5%)</option>
+                        <option value="stocks">أسهم شركات استثمارية (0.5%)</option>
+                        <option value="gold">سبائك ذهب ومعادن ثمينة (1%)</option>
+                        <option value="scrap">سكراب حديد ونحاس ومواد مصانع (2%)</option>
+                    </select>
+                </div>
+                <div>
+                    <label>قيمة الصفقة الإجمالية (بالريال):</label>
+                    <input type="number" id="asset-price" placeholder="مثال: 1000000" oninput="calculateLiveSaei()">
+                </div>
+            </div>
+
+            <div style="background: #1e3a8a; padding: 12px; border-radius: 6px; margin-top: 15px; font-weight: bold;"
+                id="saei-live-view">
+                💰 نصيب المنصة التلقائي المتوقع من السعي: 0 ريال
+            </div>
+            <button onclick="signContractAndLock()">✍️ توقيع عقد الوساطة الرقمي وتأكيد الصفقة</button>
+        </div>
+
+        <!-- نظام المحادثة المطور والمدعوم بالرقابة الأمنية للذكاء الاصطناعي لكشف التلاعب -->
+        <div class="section-box">
+            <h2>💬 محادثة التفاوض الآمنة المراقبة بالذكاء الاصطناعي (AI Compliance Monitor)</h2>
+            <p style="color: var(--text-muted); font-size: 13px;">الذكاء الاصطناعي يقوم بتحليل الرسائل فورياً لمنع
+                محاولات التهرب من السعي وضمان الالتزام بنظام المنصة.</p>
+
+            <div class="chat-container">
+                <div class="chat-messages" id="chat-box-msgs">
+                    <div class="msg alert">🔔 شات أمني: النظام يراقب المحادثة لحفظ الحقوق القانونية والمالية.</div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="chat-input-field" placeholder="اكتب رسالتك للتفاوض هنا...">
+                    <button onclick="sendSecureMessageLive()">إرسال 🚀</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- الوسطاء والجهات التمويلية المعتمدة -->
+        <div class="grid-two">
+            <div class="section-box">
+                <h3>🎖️ تصنيف الوسطاء والسعاة</h3>
+                <p style="color:#10b981; font-weight:bold;">✓ قسم الوسطاء المعتمدين والموثقين بنفاذ</p>
+                <p style="color:#f59e0b; font-weight:bold;">! قسم المسوقين غير المعتمدين (تحت التدقيق الصارم)</p>
+                <button onclick="generateGoogleMeetLink()">🔗 إنشاء اجتماع فوري عبر Google Meet</button>
+            </div>
+            <div class="section-box">
+                <h3>🏦 الجهات التمويلية المعتمدة ومسودات العقود</h3>
+                <p style="font-size:13px; color: var(--text-muted);">بنوك محلية وعالمية، شركات تمويل ورهن عقاري، صناديق
+                    وأفراد، ملزمون بوجود مسودة عقد مسبقة.</p>
+                <button onclick="alert('تم إرسال الملف الاعتباري الكامل للجهة الممولة ومسودة العقد للمالك بنجاح.')"
+                    style="background:#10b981;">📥 إرسال الصفة الاعتبارية للمالك</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function calculateLiveSaei() {
+            const price = document.getElementById('asset-price').value || 0;
+            const asset = document.getElementById('asset-type').value;
+            let rate = 0.01;
+            if (asset === 'realestate_rent') rate = 0.05;
+            if (asset === 'stocks') rate = 0.005;
+            if (asset === 'scrap') rate = 0.02;
+
+            document.getElementById('saei-live-view').innerText = `💰 نصيب المنصة التلقائي المتوقع من السعي: ${(price * rate).toLocaleString()} ريال`;
+        }
+
+        function signContractAndLock() {
+            const price = document.getElementById('asset-price').value;
+            const asset = document.getElementById('asset-type').value;
+            if (!price) return alert("يرجى إدخال قيمة الصفقة أولاً!");
+
+            fetch('/api/deals/create-flexible', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assetType: asset, price: price, brokerIds: ["agent_1"] })
+            })
+                .then(res => res.json()).then(data => {
+                    alert(`${data.message}\n\nنصيب المنصة الصافي المستقطع: ${data.platformShare} ريال.`);
+                });
+        }
+
+        function sendSecureMessageLive() {
+            const input = document.getElementById('chat-input-field');
+            const msgText = input.value.trim();
+            if (msgText === "") return;
+
+            const container = document.getElementById('chat-box-msgs');
+
+            // 1. إظهار رسالة المستخدم في الشات فوراً
+            const userMsgDiv = document.createElement('div');
+            userMsgDiv.className = "msg sent";
+            userMsgDiv.innerText = msgText;
+            container.appendChild(userMsgDiv);
+
+            // 2. إرسال الرسالة إلى الذكاء الاصطناعي الأمني بالسيرفر لكشف التلاعب والتهرب
+            fetch('/api/ai/monitor-chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chatId: "ROOM_101", messageText: msgText, senderId: "user_client" })
+            })
+                .then(res => res.json()).then(data => {
+                    if (data.suspicious) {
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = "msg alert";
+                        alertDiv.innerText = "🚨 تحذير أمني: تم رصد كلمات تخالف سياسة السعي وحفظ الحقوق بالمنصة! تم إخطار المطور.";
+                        container.appendChild(alertDiv);
+                    }
+                });
+
+            input.value = "";
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function generateGoogleMeetLink() {
+            fetch('/api/meetings/google-meet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ propertyId: 101 })
+            })
+                .then(res => res.json()).then(data => {
+                    alert(data.message);
+                    window.open(data.meetUrl, '_blank');
+                });
+        }
+    </script>
+</body>
+
+</html>

@@ -11,6 +11,13 @@ const chatLog = document.getElementById('chat-box-msgs');
 const complianceForm = document.getElementById('compliance-form');
 const complianceSubmit = document.getElementById('compliance-submit');
 const complianceResult = document.getElementById('compliance-result');
+const contractModal = document.getElementById('contract-modal');
+const contractText = document.getElementById('contract-text');
+const acceptContractButton = document.getElementById('accept-contract');
+const cancelContractButton = document.getElementById('cancel-contract');
+const complianceAssetType = document.getElementById('asset-type-flex');
+let pendingCompliancePayload = null;
+let modalPreviousFocus = null;
 const rates = {
   realestate_sale: 0.01,
   realestate_rent: 0.05,
@@ -19,42 +26,50 @@ const rates = {
   scrap: 0.02,
 };
 
-async function submitComplianceRequest(event) {
-  event.preventDefault();
-  if (complianceSubmit.disabled) {
-    return;
-  }
+const legalDrafts = Object.freeze({
+  realestate_sale:
+    'ملخص مراجعة لطلب وساطة عقارية للبيع.\n' +
+    'يتطلب الطلب تقديم بيانات التراخيص ذات الصلة ومراجعتها من مختص.\n' +
+    'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (1%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
+  realestate_rent:
+    'ملخص مراجعة لطلب وساطة عقارية للإيجار.\n' +
+    'يتطلب الطلب تقديم بيانات التراخيص والعقد ذي الصلة ومراجعتها من مختص.\n' +
+    'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (5%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
+  stocks:
+    'ملخص مراجعة لطلب متعلق بأسهم غير مدرجة.\n' +
+    'يتطلب الطلب التحقق من الملكية والمتطلبات التنظيمية بواسطة مختص.\n' +
+    'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (0.5%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
+  gold:
+    'ملخص مراجعة لطلب متعلق بالذهب والمعادن.\n' +
+    'يتطلب الطلب مراجعة بيانات الترخيص وشهادات المعدن وأي أختام مرفقة من مختص.\n' +
+    'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (1%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
+  scrap:
+    'ملخص مراجعة لطلب متعلق بالسكراب.\n' +
+    'يتطلب الطلب مراجعة بيانات الترخيص والتصاريح والمستندات الأمنية ذات الصلة من مختص.\n' +
+    'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (2%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
+});
 
-  const asset = document.getElementById('asset-type-flex').value;
-  const price = document.getElementById('asset-price-flex').value;
-  const nationality = document.getElementById('user-nationality-flex').value;
-  const propertyLocation = document.getElementById('property-location-flex').value;
-  const license = document.getElementById('license-input-flex').value.trim();
-  const customSaei = document.getElementById('custom-saei-flex').value;
-  const isRealEstate = asset === 'realestate_sale' || asset === 'realestate_rent';
+function openContractModal(asset) {
+  const defaultDraft =
+    'ملخص معلوماتي للطلب.\n' +
+    'تخضع البيانات والمتطلبات لمراجعة مستقلة، ولا تنشئ هذه الصفحة عقداً أو التزاماً.';
+  contractText.textContent = legalDrafts[asset] || defaultDraft;
+  modalPreviousFocus = document.activeElement;
+  contractModal.hidden = false;
+  acceptContractButton.focus();
+}
 
-  if (isRealEstate && (!nationality || !propertyLocation)) {
-    complianceResult.textContent = 'اختر الجنسية وموقع العقار لإرسال طلب العقار.';
-    complianceResult.dataset.state = 'error';
-    return;
+function closeContractModal(discardRequest = true) {
+  contractModal.hidden = true;
+  if (discardRequest) {
+    pendingCompliancePayload = null;
   }
+  if (modalPreviousFocus instanceof HTMLElement) {
+    modalPreviousFocus.focus();
+  }
+}
 
-  const payload = {
-    assetType: asset,
-    price,
-    licenseNumber: license,
-    chamberOfCommerceStampAttached: document.getElementById(
-      'chamber-stamp-checkbox',
-    ).checked,
-  };
-  if (isRealEstate) {
-    payload.userNationality = nationality;
-    payload.propertyLocation = propertyLocation;
-  }
-  if (customSaei) {
-    payload.customSaeiAmount = customSaei;
-  }
-
+async function sendComplianceRequest(payload) {
   complianceSubmit.disabled = true;
   complianceResult.textContent = 'جارٍ إرسال الطلب...';
   complianceResult.dataset.state = 'pending';
@@ -66,7 +81,7 @@ async function submitComplianceRequest(event) {
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, draftAcknowledged: true }),
     });
     const data = await response.json().catch(() => null);
     if (!response.ok) {
@@ -97,6 +112,58 @@ async function submitComplianceRequest(event) {
   } finally {
     complianceSubmit.disabled = false;
   }
+}
+
+function submitComplianceRequest(event) {
+  event.preventDefault();
+  if (complianceSubmit.disabled || pendingCompliancePayload) {
+    return;
+  }
+
+  const asset = complianceAssetType.value;
+  const price = document.getElementById('asset-price-flex').value;
+  const nationality = document.getElementById('user-nationality-flex').value;
+  const propertyLocation = document.getElementById('property-location-flex').value;
+  const license = document.getElementById('license-input-flex').value.trim();
+  const customSaei = document.getElementById('custom-saei-flex').value;
+  const isRealEstate = asset === 'realestate_sale' || asset === 'realestate_rent';
+
+  if (isRealEstate && (!nationality || !propertyLocation)) {
+    complianceResult.textContent = 'اختر الجنسية وموقع العقار لإرسال طلب العقار.';
+    complianceResult.dataset.state = 'error';
+    return;
+  }
+
+  pendingCompliancePayload = {
+    assetType: asset,
+    price,
+    licenseNumber: license,
+    chamberOfCommerceStampAttached: document.getElementById(
+      'chamber-stamp-checkbox',
+    ).checked,
+  };
+  if (isRealEstate) {
+    pendingCompliancePayload.userNationality = nationality;
+    pendingCompliancePayload.propertyLocation = propertyLocation;
+  }
+  if (customSaei) {
+    pendingCompliancePayload.customSaeiAmount = customSaei;
+  }
+
+  complianceResult.textContent = '';
+  complianceResult.dataset.state = '';
+  openContractModal(asset);
+}
+
+async function acceptContractDraft() {
+  if (!pendingCompliancePayload || complianceSubmit.disabled) {
+    return;
+  }
+
+  const payload = pendingCompliancePayload;
+  closeContractModal(false);
+  pendingCompliancePayload = null;
+  await sendComplianceRequest(payload);
 }
 
 function updateEstimate() {
@@ -218,6 +285,18 @@ async function submitMessage(event) {
 assetType.addEventListener('change', updateEstimate);
 assetPrice.addEventListener('input', updateEstimate);
 complianceForm.addEventListener('submit', submitComplianceRequest);
+acceptContractButton.addEventListener('click', acceptContractDraft);
+cancelContractButton.addEventListener('click', () => closeContractModal());
+contractModal.addEventListener('click', (event) => {
+  if (event.target === contractModal) {
+    closeContractModal();
+  }
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !contractModal.hidden) {
+    closeContractModal();
+  }
+});
 chatForm.addEventListener('submit', submitMessage);
 updateEstimate();
 checkApiHealth();

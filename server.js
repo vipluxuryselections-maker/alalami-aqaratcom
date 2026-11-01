@@ -357,6 +357,7 @@ app.post('/api/compliance/validate-deal-flexible', (req, res) => {
     chamberOfCommerceStampAttached,
     isSuperDeveloperBypass,
     customSaeiAmount,
+    draftAcknowledged,
   } = req.body ?? {};
   const rule =
     typeof assetType === 'string' && Object.hasOwn(assetRegulatoryRules, assetType)
@@ -378,7 +379,9 @@ app.post('/api/compliance/validate-deal-flexible', (req, res) => {
     (userNationality !== undefined && typeof userNationality !== 'string') ||
     (propertyLocation !== undefined && typeof propertyLocation !== 'string') ||
     (chamberOfCommerceStampAttached !== undefined &&
-      typeof chamberOfCommerceStampAttached !== 'boolean')
+      typeof chamberOfCommerceStampAttached !== 'boolean') ||
+    (draftAcknowledged !== undefined &&
+      typeof draftAcknowledged !== 'boolean')
   ) {
     res.status(400).json({
       success: false,
@@ -470,6 +473,7 @@ app.post('/api/compliance/validate-deal-flexible', (req, res) => {
     complianceStatus: 'pending_manual_verification',
     complianceVerified: false,
     manualReviewRequired: true,
+    draftAcknowledged: draftAcknowledged === true,
     licenseInformationProvided: isNonEmptyString(licenseNumber, 300),
     chamberStampInformationProvided: chamberOfCommerceStampAttached === true,
   };

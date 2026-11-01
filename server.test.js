@@ -33,12 +33,16 @@ test('website and external client script are served with same-origin CSP', async
   assert.match(page, /id="chamber-stamp-checkbox"/);
   assert.match(page, /id="custom-saei-flex"/);
   assert.match(page, /id="developer-bypass-checkbox" disabled/);
+  assert.match(page, /id="contract-modal"/);
+  assert.match(page, /id="accept-contract"/);
   assert.doesNotMatch(page, /onclick=/i);
   assert.doesNotMatch(page, /<script>[\s\S]*<\/script>/);
   assert.ok(contentSecurityPolicy?.includes("script-src 'self'"));
   assert.equal(scriptResponse.status, 200);
   assert.match(script, /\/api\/ai\/monitor-chat/);
   assert.match(script, /\/api\/compliance\/validate-deal-flexible/);
+  assert.match(script, /draftAcknowledged: true/);
+  assert.match(script, /contractModal\.addEventListener/);
   assert.doesNotMatch(script, /x-compliance-bypass-token/i);
 });
 
@@ -181,6 +185,43 @@ test('compliance route accepts documentation for manual review without claiming 
   assert.equal(data.complianceVerified, false);
   assert.equal(data.manualReviewRequired, true);
   assert.equal(data.isBypassed, false);
+  assert.equal(data.draftAcknowledged, false);
+});
+
+test('compliance route records draft acknowledgment without claiming a signature', async () => {
+  const response = await fetch(`${baseUrl}/api/compliance/validate-deal-flexible`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      assetType: 'gold',
+      price: '10000',
+      licenseNumber: 'REG-123',
+      chamberOfCommerceStampAttached: true,
+      draftAcknowledged: true,
+    }),
+  });
+  const data = await response.json();
+
+  assert.equal(response.status, 202);
+  assert.equal(data.draftAcknowledged, true);
+  assert.equal(data.complianceVerified, false);
+  assert.equal(data.manualReviewRequired, true);
+});
+
+test('compliance route rejects malformed draft acknowledgment', async () => {
+  const response = await fetch(`${baseUrl}/api/compliance/validate-deal-flexible`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      assetType: 'gold',
+      price: '10000',
+      licenseNumber: 'REG-123',
+      chamberOfCommerceStampAttached: true,
+      draftAcknowledged: 'yes',
+    }),
+  });
+
+  assert.equal(response.status, 400);
 });
 
 test('compliance route applies the configured real-estate location policy', async () => {

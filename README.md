@@ -47,6 +47,11 @@ production use. Exceptional bypass requests on the flexible endpoint require
 the server-side `COMPLIANCE_BYPASS_TOKEN`; requests still remain pending
 manual review.
 
+The web compliance form presents an informational draft before submitting.
+Acknowledging it records only that the user chose to continue with the review
+request; it is not an electronic signature, contract acceptance, payment, or
+compliance approval. Review records currently exist only in server memory.
+
 The chat monitor uses keyword matching; it is not an AI model and does not
 block messages. Developer alerts are sent only to authenticated Socket.IO
 connections configured with `DEVELOPER_ALERT_TOKEN`. Configure

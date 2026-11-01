@@ -26,8 +26,29 @@ npm install
 npm start
 ```
 
-Then open `http://localhost:3000`. The chat monitor currently uses keyword
-matching; it is not an AI model and does not block messages. Developer alerts
-are sent only to authenticated Socket.IO connections configured with
-`DEVELOPER_ALERT_TOKEN`. Configure `ALLOWED_ORIGINS` as a comma-separated list
-when the web client is hosted on a different origin.
+Then open `http://localhost:3000`. The server uses `PORT` when set by the
+hosting platform and falls back to port `3000`.
+
+The API includes a health check, keyword-based chat monitoring, subscription
+plan previews, and flexible deal/saei previews. These previews do not process
+payments, activate subscriptions, lock assets, or execute payouts. Google Meet
+link creation returns `501` until Google API credentials and integration are
+configured. Realtime Socket.IO connections require `DEVELOPER_ALERT_TOKEN`;
+live-stream messages are restricted to authenticated connections that joined
+the corresponding property room.
+
+The compliance endpoints (`POST /api/compliance/validate-deal` and
+`POST /api/compliance/validate-deal-flexible`) check submitted fields and
+record requests for manual review; they do not verify licenses, security
+clearances, or the authenticity of stamps. A request does not create or sign a
+contract, lock a deal, or unlock communications. The real-estate location rule
+is an application policy and should be reviewed by qualified counsel before
+production use. Exceptional bypass requests on the flexible endpoint require
+the server-side `COMPLIANCE_BYPASS_TOKEN`; requests still remain pending
+manual review.
+
+The chat monitor uses keyword matching; it is not an AI model and does not
+block messages. Developer alerts are sent only to authenticated Socket.IO
+connections configured with `DEVELOPER_ALERT_TOKEN`. Configure
+`ALLOWED_ORIGINS` as a comma-separated list when the web client is hosted on a
+different origin.

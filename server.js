@@ -19,6 +19,7 @@ const allowedOrigins = new Set(
     .filter(Boolean),
 );
 const developerAlertToken = process.env.DEVELOPER_ALERT_TOKEN;
+const complianceBypassToken = process.env.COMPLIANCE_BYPASS_TOKEN;
 const suspiciousWords = [
   'رقمي',
   'جوالي',
@@ -27,6 +28,66 @@ const suspiciousWords = [
   'بدون مكتب',
   'تحويل مباشر',
 ];
+const defaultSaeiRates = Object.freeze({
+  realestate_sale: 0.01,
+  realestate_rent: 0.05,
+  stocks: 0.005,
+  gold: 0.01,
+  scrap: 0.02,
+});
+const assetRegulatoryRules = Object.freeze({
+  realestate_sale: Object.freeze({
+    requiredLicense: 'رخصة فال العقارية + ترخيص الإعلان العقاري',
+    saeiRate: defaultSaeiRates.realestate_sale,
+  }),
+  realestate_rent: Object.freeze({
+    requiredLicense: 'رخصة فال العقارية + توثيق عقد إيجار موحد',
+    saeiRate: defaultSaeiRates.realestate_rent,
+  }),
+  gold: Object.freeze({
+    requiredLicense: 'سجل تجاري لتجارة المعادن + ختم الغرفة التجارية الإلكتروني المعتمد',
+    saeiRate: defaultSaeiRates.gold,
+  }),
+  stocks: Object.freeze({
+    requiredLicense: 'إقرار ملكية أسهم شركة مغلقة غير مدرجة (امتثال CMA)',
+    saeiRate: defaultSaeiRates.stocks,
+  }),
+  scrap: Object.freeze({
+    requiredLicense:
+      'رخصة مستودع بلدية + تصريح الشرطة + ختم وتصديق الغرفة التجارية للشركة',
+    saeiRate: defaultSaeiRates.scrap,
+  }),
+});
+const assetComplianceRules = Object.freeze({
+  realestate_sale: Object.freeze({
+    requiredLicense: 'رخصة فال العقارية + ترخيص الإعلان العقاري',
+    saeiRate: defaultSaeiRates.realestate_sale,
+  }),
+  realestate_rent: Object.freeze({
+    requiredLicense: 'رخصة فال العقارية + توثيق عقد إيجار موحد',
+    saeiRate: defaultSaeiRates.realestate_rent,
+  }),
+  gold: Object.freeze({
+    requiredLicense: 'سجل تجاري لتجارة المعادن الثمينة + شهادة مطابقة العيار والدمغة',
+    saeiRate: defaultSaeiRates.gold,
+  }),
+  stocks: Object.freeze({
+    requiredLicense: 'إقرار ملكية أسهم شركة مغلقة غير مدرجة (امتثال CMA)',
+    saeiRate: defaultSaeiRates.stocks,
+  }),
+  scrap: Object.freeze({
+    requiredLicense: 'رخصة المستودع البلدية',
+    saeiRate: defaultSaeiRates.scrap,
+  }),
+});
+const complianceReviewNotice =
+  'المنصة أداة تقنية لتسجيل الطلبات. لا يُعد هذا الرد اعتماداً نظامياً أو تحققاً من المستندات ولا ينشئ عقداً أو توقيعاً إلكترونياً. تقع مسؤولية مراجعة المتطلبات المنطبقة على الأطراف، وينبغي استشارة مختص قانوني.';
+const subscriptionPlans = Object.freeze({
+  weekly: { name: 'الباقة الأسبوعية', price: 29 },
+  monthly: { name: 'الباقة الشهرية', price: 99 },
+  yearly: { name: 'الباقة السنوية', price: 799 },
+});
+const customDeals = new Map();
 
 const io = new Server(server, {
   cors: {
@@ -135,10 +196,419 @@ io.use((socket, next) => {
 
 io.on('connection', (socket) => {
   socket.join('super_developer');
+
+  socket.on('start_realtime_stream', (data) => {
+    const propertyId = data?.propertyId;
+    if (!isNonEmptyString(propertyId, 120)) {
+      socket.emit('realtime_error', {
+        event: 'start_realtime_stream',
+        message: 'معرّف العقار مطلوب.',
+      });
+      return;
+    }
+
+    socket.join(`live_room_${propertyId}`);
+    socket.emit('live_stream_joined', { propertyId });
+  });
+
+  socket.on('send_live_chat_message', (data) => {
+    const { propertyId, senderName, messageText } = data ?? {};
+    if (
+      !isNonEmptyString(propertyId, 120) ||
+      !isNonEmptyString(senderName, 120) ||
+      !isNonEmptyString(messageText, 1000)
+    ) {
+      socket.emit('realtime_error', {
+        event: 'send_live_chat_message',
+        message: 'معرّف العقار واسم المرسل والرسالة مطلوبة ضمن الحدود المسموحة.',
+      });
+      return;
+    }
+
+    const room = `live_room_${propertyId}`;
+    if (!socket.rooms.has(room)) {
+      socket.emit('realtime_error', {
+        event: 'send_live_chat_message',
+        message: 'انضم إلى بث العقار قبل إرسال الرسائل.',
+      });
+      return;
+    }
+
+    io.to(room).emit('live_chat_received', {
+      propertyId,
+      sender: senderName,
+      text: messageText,
+    });
+  });
 });
 
 app.get('/api/health', (req, res) => {
   res.json({ success: true, service: 'aqarat-app-api' });
+});
+
+app.post('/api/subscriptions/subscribe', (req, res) => {
+  const { userId, planType } = req.body ?? {};
+  const plan =
+    typeof planType === 'string' && Object.hasOwn(subscriptionPlans, planType)
+      ? subscriptionPlans[planType]
+      : null;
+
+  if (!isNonEmptyString(userId, 120) || !plan) {
+    res.status(400).json({
+      success: false,
+      message: 'أدخل معرّف مستخدم صالحاً واختر باقة موجودة.',
+    });
+    return;
+  }
+
+  res.json({
+    success: true,
+    userId,
+    plan: { type: planType, ...plan },
+    subscriptionActivated: false,
+    paymentRequired: true,
+    message: 'تم استلام طلب الباقة. يلزم ربط بوابة دفع لتفعيل الاشتراك.',
+  });
+});
+
+app.post('/api/deals/create-flexible', (req, res) => {
+  const { assetType, price, brokerIds, customSaeiAmount } = req.body ?? {};
+  const priceHalalas = parseAmountInHalalas(price);
+  const hasCustomSaei = customSaeiAmount !== undefined && customSaeiAmount !== null;
+  const customSaeiHalalas = hasCustomSaei
+    ? parseAmountInHalalas(customSaeiAmount)
+    : null;
+  const validBrokerIds =
+    Array.isArray(brokerIds) &&
+    brokerIds.length <= 50 &&
+    brokerIds.every((brokerId) => isNonEmptyString(brokerId, 120)) &&
+    new Set(brokerIds).size === brokerIds.length;
+
+  if (
+    typeof assetType !== 'string' ||
+    !Object.hasOwn(defaultSaeiRates, assetType) ||
+    priceHalalas === null ||
+    (hasCustomSaei && customSaeiHalalas === null) ||
+    !validBrokerIds
+  ) {
+    res.status(400).json({
+      success: false,
+      message:
+        'تحقق من نوع الأصل والسعر ومبلغ السعي الاختياري وقائمة السعاة (بحد أقصى 50).',
+    });
+    return;
+  }
+
+  const saeiHalalas =
+    customSaeiHalalas ?? Math.round(priceHalalas * defaultSaeiRates[assetType]);
+  if (saeiHalalas <= 0) {
+    res.status(400).json({
+      success: false,
+      message: 'يجب أن يكون مبلغ السعي موجباً.',
+    });
+    return;
+  }
+
+  const platformHalalas = Math.round(saeiHalalas * 0.5);
+  const brokerPoolHalalas = saeiHalalas - platformHalalas;
+  const brokerShares = brokerIds.map((brokerId, index) => {
+    const share =
+      index === brokerIds.length - 1
+        ? brokerPoolHalalas -
+          Math.floor(brokerPoolHalalas / brokerIds.length) * index
+        : Math.floor(brokerPoolHalalas / brokerIds.length);
+    return { brokerId, amount: formatHalalas(share) };
+  });
+  const distributedBrokerHalalas = brokerShares.reduce(
+    (total, broker) => total + Math.round(broker.amount * 100),
+    0,
+  );
+  const dealId = `DEAL_${crypto.randomUUID()}`;
+  const deal = {
+    dealId,
+    assetType,
+    price: formatHalalas(priceHalalas),
+    saeiAmount: formatHalalas(saeiHalalas),
+    platformShare: formatHalalas(platformHalalas),
+    brokerShares,
+    unassignedBrokerShare: formatHalalas(
+      brokerPoolHalalas - distributedBrokerHalalas,
+    ),
+    status: 'awaiting_payment',
+    payoutsExecuted: false,
+  };
+  customDeals.set(dealId, deal);
+
+  res.status(201).json({
+    success: true,
+    ...deal,
+    message:
+      'تم إنشاء معاينة للصفقة. لا يتم قفل أصل فعلي أو تنفيذ أي دفعة قبل ربط الخدمات اللازمة.',
+  });
+});
+
+app.post('/api/compliance/validate-deal-flexible', (req, res) => {
+  const {
+    assetType,
+    price,
+    userNationality,
+    propertyLocation,
+    licenseNumber,
+    chamberOfCommerceStampAttached,
+    isSuperDeveloperBypass,
+    customSaeiAmount,
+  } = req.body ?? {};
+  const rule =
+    typeof assetType === 'string' && Object.hasOwn(assetRegulatoryRules, assetType)
+      ? assetRegulatoryRules[assetType]
+      : null;
+  const priceHalalas = parseAmountInHalalas(price);
+  const hasCustomSaei = customSaeiAmount !== undefined && customSaeiAmount !== null;
+  const customSaeiHalalas = hasCustomSaei
+    ? parseAmountInHalalas(customSaeiAmount)
+    : null;
+
+  if (
+    !rule ||
+    priceHalalas === null ||
+    (hasCustomSaei && customSaeiHalalas === null) ||
+    (isSuperDeveloperBypass !== undefined &&
+      typeof isSuperDeveloperBypass !== 'boolean') ||
+    (licenseNumber !== undefined && typeof licenseNumber !== 'string') ||
+    (userNationality !== undefined && typeof userNationality !== 'string') ||
+    (propertyLocation !== undefined && typeof propertyLocation !== 'string') ||
+    (chamberOfCommerceStampAttached !== undefined &&
+      typeof chamberOfCommerceStampAttached !== 'boolean')
+  ) {
+    res.status(400).json({
+      success: false,
+      message: 'تحقق من نوع الأصل والسعر وأنواع بيانات التحقق الاختيارية.',
+    });
+    return;
+  }
+
+  const saeiHalalas =
+    customSaeiHalalas ?? Math.round(priceHalalas * rule.saeiRate);
+  if (saeiHalalas <= 0) {
+    res.status(400).json({
+      success: false,
+      message: 'يجب أن يكون مبلغ السعي موجباً.',
+    });
+    return;
+  }
+
+  const isBypassRequested = isSuperDeveloperBypass === true;
+  if (
+    isBypassRequested &&
+    !tokensMatch(req.get('x-compliance-bypass-token'), complianceBypassToken)
+  ) {
+    res.status(403).json({
+      success: false,
+      code: 'COMPLIANCE_BYPASS_UNAUTHORIZED',
+      message: 'التمرير الاستثنائي يتطلب صلاحية خادم مخولة.',
+    });
+    return;
+  }
+
+  if (!isBypassRequested) {
+    if (
+      (assetType === 'realestate_sale' || assetType === 'realestate_rent') &&
+      (!isNonEmptyString(userNationality, 80) ||
+        !isNonEmptyString(propertyLocation, 120))
+    ) {
+      res.status(400).json({
+        success: false,
+        message: 'الجنسية وموقع العقار مطلوبان للتحقق الأولي من هذه الصفقة.',
+      });
+      return;
+    }
+
+    if (
+      userNationality !== 'Saudi' &&
+      (assetType === 'realestate_sale' || assetType === 'realestate_rent') &&
+      (propertyLocation === 'Makkah' || propertyLocation === 'Madinah')
+    ) {
+      res.status(403).json({
+        success: false,
+        code: 'REQUIRES_LEGAL_REVIEW',
+        message:
+          'لا يمكن متابعة الطلب وفق قاعدة التطبيق الحالية؛ يلزم التحقق من القواعد النظامية المنطبقة قبل اتخاذ القرار.',
+      });
+      return;
+    }
+
+    if (!isNonEmptyString(licenseNumber, 300)) {
+      res.status(422).json({
+        success: false,
+        code: 'LICENSE_INFORMATION_REQUIRED',
+        requiredLicense: rule.requiredLicense,
+        message: 'أدخل بيانات الترخيص المطلوبة للمتابعة إلى المراجعة اليدوية.',
+      });
+      return;
+    }
+
+    if (
+      (assetType === 'gold' || assetType === 'scrap') &&
+      chamberOfCommerceStampAttached !== true
+    ) {
+      res.status(422).json({
+        success: false,
+        code: 'CHAMBER_STAMP_INFORMATION_REQUIRED',
+        message: 'أرفق بيانات ختم الغرفة التجارية للمتابعة إلى المراجعة اليدوية.',
+      });
+      return;
+    }
+  }
+
+  const dealId = `DEAL_COMPLIANCE_${crypto.randomUUID()}`;
+  const deal = {
+    dealId,
+    assetType,
+    price: formatHalalas(priceHalalas),
+    calculatedSaei: formatHalalas(saeiHalalas),
+    isBypassed: isBypassRequested,
+    complianceStatus: 'pending_manual_verification',
+    complianceVerified: false,
+    manualReviewRequired: true,
+    licenseInformationProvided: isNonEmptyString(licenseNumber, 300),
+    chamberStampInformationProvided: chamberOfCommerceStampAttached === true,
+  };
+  customDeals.set(dealId, deal);
+
+  if (isBypassRequested) {
+    console.warn(
+      `Compliance exception requested by authorized operator: dealId=${dealId}, assetType=${assetType}`,
+    );
+  }
+
+  res.status(202).json({
+    success: true,
+    ...deal,
+    message:
+      'تم تسجيل الطلب للمراجعة اليدوية. لم يتم التحقق من صحة المستندات أو الأختام، ولم تُقفل الصفقة أو تُفتح قنوات التواصل.',
+  });
+});
+
+app.post('/api/compliance/validate-deal', (req, res) => {
+  const {
+    assetType,
+    price,
+    userNationality,
+    propertyLocation,
+    licenseNumber,
+    securityClearanceAttached,
+  } = req.body ?? {};
+  const rule =
+    typeof assetType === 'string' && Object.hasOwn(assetComplianceRules, assetType)
+      ? assetComplianceRules[assetType]
+      : null;
+  const priceHalalas = parseAmountInHalalas(price);
+
+  if (
+    !rule ||
+    priceHalalas === null ||
+    (userNationality !== undefined && typeof userNationality !== 'string') ||
+    (propertyLocation !== undefined && typeof propertyLocation !== 'string') ||
+    (licenseNumber !== undefined && typeof licenseNumber !== 'string') ||
+    (securityClearanceAttached !== undefined &&
+      typeof securityClearanceAttached !== 'boolean')
+  ) {
+    res.status(400).json({
+      success: false,
+      message: 'تحقق من نوع الأصل والسعر وأنواع بيانات الامتثال الاختيارية.',
+    });
+    return;
+  }
+
+  const isRealEstate =
+    assetType === 'realestate_sale' || assetType === 'realestate_rent';
+  if (
+    isRealEstate &&
+    (!isNonEmptyString(userNationality, 80) ||
+      !isNonEmptyString(propertyLocation, 120))
+  ) {
+    res.status(400).json({
+      success: false,
+      message: 'الجنسية وموقع العقار مطلوبان لتسجيل طلب المراجعة.',
+    });
+    return;
+  }
+
+  if (
+    isRealEstate &&
+    userNationality !== 'Saudi' &&
+    (propertyLocation === 'Makkah' || propertyLocation === 'Madinah')
+  ) {
+    res.status(403).json({
+      success: false,
+      actionRequired: 'MANUAL_LEGAL_REVIEW',
+      code: 'REQUIRES_LEGAL_REVIEW',
+      message:
+        'تعذر متابعة الطلب آلياً؛ تحقّق من الأنظمة والاستثناءات المنطبقة مع مختص قبل اتخاذ أي إجراء.',
+      disclaimer: complianceReviewNotice,
+    });
+    return;
+  }
+
+  if (!isNonEmptyString(licenseNumber, 300)) {
+    res.status(422).json({
+      success: false,
+      code: 'LICENSE_INFORMATION_REQUIRED',
+      requiredLicense: rule.requiredLicense,
+      message: 'أدخل بيانات الترخيص المطلوبة لتسجيل الطلب للمراجعة اليدوية.',
+    });
+    return;
+  }
+
+  if (assetType === 'scrap' && securityClearanceAttached !== true) {
+    res.status(422).json({
+      success: false,
+      code: 'SECURITY_CLEARANCE_INFORMATION_REQUIRED',
+      message: 'أدخل بيانات تصريح عدم الممانعة الأمني للمتابعة إلى المراجعة اليدوية.',
+    });
+    return;
+  }
+
+  const saeiHalalas = Math.round(priceHalalas * rule.saeiRate);
+  if (saeiHalalas <= 0) {
+    res.status(400).json({
+      success: false,
+      message: 'مبلغ الصفقة منخفض جداً لحساب سعي موجب.',
+    });
+    return;
+  }
+
+  const dealId = `DEAL_REVIEW_${crypto.randomUUID()}`;
+  const review = {
+    dealId,
+    assetType,
+    price: formatHalalas(priceHalalas),
+    calculatedSaei: formatHalalas(saeiHalalas),
+    complianceStatus: 'pending_manual_review',
+    complianceVerified: false,
+    draftStatus: 'not_generated',
+    contractSigned: false,
+    communicationUnlocked: false,
+    licenseInformationProvided: true,
+    securityClearanceInformationProvided: securityClearanceAttached === true,
+  };
+  customDeals.set(dealId, review);
+
+  res.status(202).json({
+    success: true,
+    ...review,
+    message:
+      'تم تسجيل طلب المراجعة وحساب السعي التقديري فقط. لم يتم اعتماد المستندات أو إنشاء مسودة عقد أو قفل الصفقة.',
+    disclaimer: complianceReviewNotice,
+  });
+});
+
+app.post('/api/meetings/google-meet', (req, res) => {
+  res.status(501).json({
+    success: false,
+    code: 'GOOGLE_MEET_NOT_CONFIGURED',
+    message: 'إنشاء اجتماع Meet يتطلب ربط Google API وحساباً مخولاً.',
+  });
 });
 
 app.post('/api/ai/monitor-chat', (req, res) => {
@@ -246,6 +716,11 @@ if (require.main === module) {
     if (!developerAlertToken) {
       console.warn(
         'DEVELOPER_ALERT_TOKEN is not configured; developer Socket.IO alerts are disabled.',
+      );
+    }
+    if (!complianceBypassToken) {
+      console.warn(
+        'COMPLIANCE_BYPASS_TOKEN is not configured; compliance bypass requests are disabled.',
       );
     }
   });

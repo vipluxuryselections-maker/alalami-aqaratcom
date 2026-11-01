@@ -8,6 +8,9 @@ const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input-field');
 const sendButton = document.getElementById('send-message');
 const chatLog = document.getElementById('chat-box-msgs');
+const complianceForm = document.getElementById('compliance-form');
+const complianceSubmit = document.getElementById('compliance-submit');
+const complianceResult = document.getElementById('compliance-result');
 const rates = {
   realestate_sale: 0.01,
   realestate_rent: 0.05,
@@ -15,6 +18,86 @@ const rates = {
   gold: 0.01,
   scrap: 0.02,
 };
+
+async function submitComplianceRequest(event) {
+  event.preventDefault();
+  if (complianceSubmit.disabled) {
+    return;
+  }
+
+  const asset = document.getElementById('asset-type-flex').value;
+  const price = document.getElementById('asset-price-flex').value;
+  const nationality = document.getElementById('user-nationality-flex').value;
+  const propertyLocation = document.getElementById('property-location-flex').value;
+  const license = document.getElementById('license-input-flex').value.trim();
+  const customSaei = document.getElementById('custom-saei-flex').value;
+  const isRealEstate = asset === 'realestate_sale' || asset === 'realestate_rent';
+
+  if (isRealEstate && (!nationality || !propertyLocation)) {
+    complianceResult.textContent = 'اختر الجنسية وموقع العقار لإرسال طلب العقار.';
+    complianceResult.dataset.state = 'error';
+    return;
+  }
+
+  const payload = {
+    assetType: asset,
+    price,
+    licenseNumber: license,
+    chamberOfCommerceStampAttached: document.getElementById(
+      'chamber-stamp-checkbox',
+    ).checked,
+  };
+  if (isRealEstate) {
+    payload.userNationality = nationality;
+    payload.propertyLocation = propertyLocation;
+  }
+  if (customSaei) {
+    payload.customSaeiAmount = customSaei;
+  }
+
+  complianceSubmit.disabled = true;
+  complianceResult.textContent = 'جارٍ إرسال الطلب...';
+  complianceResult.dataset.state = 'pending';
+
+  try {
+    const response = await fetch('/api/compliance/validate-deal-flexible', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(
+        data?.message || `تعذر إرسال الطلب (HTTP ${response.status}).`,
+      );
+    }
+
+    complianceResult.textContent = [
+      data.message,
+      data.dealId ? `رقم الطلب: ${data.dealId}.` : '',
+      Number.isFinite(data.calculatedSaei)
+        ? `السعي التقديري: ${new Intl.NumberFormat('ar-SA', {
+            maximumFractionDigits: 2,
+          }).format(data.calculatedSaei)} ريال.`
+        : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+    complianceResult.dataset.state = 'success';
+  } catch (error) {
+    console.error('Compliance request failed:', error);
+    complianceResult.textContent =
+      error instanceof TypeError
+        ? 'تعذر الاتصال بالخادم. لم يتم إرسال الطلب.'
+        : error.message;
+    complianceResult.dataset.state = 'error';
+  } finally {
+    complianceSubmit.disabled = false;
+  }
+}
 
 function updateEstimate() {
   const price = Number(assetPrice.value);
@@ -134,6 +217,7 @@ async function submitMessage(event) {
 
 assetType.addEventListener('change', updateEstimate);
 assetPrice.addEventListener('input', updateEstimate);
+complianceForm.addEventListener('submit', submitComplianceRequest);
 chatForm.addEventListener('submit', submitMessage);
 updateEstimate();
 checkApiHealth();

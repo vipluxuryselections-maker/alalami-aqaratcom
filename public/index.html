@@ -195,6 +195,47 @@
         .footnote { margin: 12px 0 0; color: var(--text-muted); font-size: 12px; }
         .status-green { color: #34d399; font-weight: 700; }
         .status-amber { color: #fbbf24; font-weight: 700; }
+        .compliance-note {
+            margin: 12px 0;
+            padding: 12px;
+            border: 1px solid #79551f;
+            border-radius: 9px;
+            background: #392d1c;
+            color: #ffdc9b;
+            font-size: 13px;
+        }
+        .compliance-admin-panel {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #4338ca;
+            border-radius: 9px;
+            background: #312e81;
+        }
+        .compliance-admin-panel strong {
+            display: block;
+            margin-bottom: 8px;
+            color: #c7d2fe;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin: 12px 0 0;
+        }
+        .checkbox-label input {
+            width: 18px;
+            min-width: 18px;
+            min-height: 18px;
+            margin: 4px 0 0;
+            accent-color: #34d399;
+        }
+        .compliance-result {
+            min-height: 24px;
+            margin: 12px 0 0;
+            font-size: 14px;
+        }
+        .compliance-result[data-state="error"] { color: #ffc0c3; }
+        .compliance-result[data-state="success"] { color: #7de6bd; }
         @media (max-width: 700px) {
             body { padding: 16px 11px; }
             .grid-two { grid-template-columns: 1fr; gap: 0; }
@@ -257,6 +298,71 @@
                 <strong id="saei-live-view">0 ريال</strong>
             </div>
             <p class="footnote">حساب تقديري للعرض فقط. لا ينشئ عقداً ولا يخصم أو يحصّل أي مبلغ.</p>
+        </section>
+
+        <section class="section-box" aria-labelledby="compliance-heading">
+            <h2 id="compliance-heading">⚖️ بيانات الامتثال ومراجعة الصفقة</h2>
+            <p class="compliance-note">
+                إدخال بيانات الترخيص أو تأكيد إرفاق الختم لا يتحقق من صحتها أو أصالتها. تُرسل الطلبات للمراجعة اليدوية، ولا تؤدي إلى اعتماد رسمي أو قفل الصفقة.
+            </p>
+            <form id="compliance-form">
+                <div class="grid-two">
+                    <div>
+                        <label for="asset-type-flex">نوع الأصل:</label>
+                        <select id="asset-type-flex" required>
+                            <option value="realestate_sale">عقارات — بيع (1%)</option>
+                            <option value="realestate_rent">عقارات — إيجار (5%)</option>
+                            <option value="stocks">أسهم غير مدرجة (0.5%)</option>
+                            <option value="gold">ذهب ومعادن ثمينة (1%)</option>
+                            <option value="scrap">سكراب ومواد مصانع (2%)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="asset-price-flex">قيمة الصفقة الإجمالية (بالريال):</label>
+                        <input type="number" id="asset-price-flex" min="0.01" step="0.01" inputmode="decimal" placeholder="مثال: 5000000" required>
+                    </div>
+                    <div>
+                        <label for="user-nationality-flex">الجنسية:</label>
+                        <select id="user-nationality-flex">
+                            <option value="">اختر الجنسية</option>
+                            <option value="Saudi">سعودي</option>
+                            <option value="Non-Saudi">غير سعودي</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="property-location-flex">موقع العقار:</label>
+                        <select id="property-location-flex">
+                            <option value="">اختر الموقع</option>
+                            <option value="Makkah">مكة المكرمة</option>
+                            <option value="Madinah">المدينة المنورة</option>
+                            <option value="Other">موقع آخر</option>
+                        </select>
+                    </div>
+                </div>
+
+                <label for="license-input-flex">بيانات الترخيص أو السجل التجاري:</label>
+                <input type="text" id="license-input-flex" maxlength="300" autocomplete="off" placeholder="أدخل البيانات المطلوبة بحسب نوع الأصل">
+
+                <label class="checkbox-label" for="chamber-stamp-checkbox">
+                    <input type="checkbox" id="chamber-stamp-checkbox">
+                    <span>أؤكد إرفاق بيانات ختم الغرفة التجارية (للذهب والسكراب عند انطباق المتطلب). هذا الإقرار لا يثبت صحة الختم.</span>
+                </label>
+
+                <div class="compliance-admin-panel">
+                    <strong>👑 إعدادات السعي والتحكم الاستثنائي</strong>
+                    <label for="custom-saei-flex">مبلغ السعي المخصص (اختياري، بالريال):</label>
+                    <input type="number" id="custom-saei-flex" min="0.01" step="0.01" inputmode="decimal" placeholder="اتركه فارغاً لاستخدام النسبة الافتراضية">
+                    <label class="checkbox-label" for="developer-bypass-checkbox">
+                        <input type="checkbox" id="developer-bypass-checkbox" disabled aria-describedby="bypass-unavailable-note">
+                        <span>التمرير الاستثنائي غير متاح من واجهة المتصفح.</span>
+                    </label>
+                    <p class="compliance-note" id="bypass-unavailable-note">
+                        يتطلب التمرير صلاحية خادمية موثقة، ولا يتجاوز المراجعة اليدوية. لا تضع رمز الصلاحية في الصفحة أو المتصفح.
+                    </p>
+                </div>
+                <button class="primary-button" id="compliance-submit" type="submit">إرسال للمراجعة اليدوية</button>
+                <p class="compliance-result" id="compliance-result" role="status" aria-live="polite"></p>
+            </form>
         </section>
 
         <section class="section-box" aria-labelledby="chat-heading">

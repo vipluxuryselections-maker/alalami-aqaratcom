@@ -51,7 +51,7 @@ class _AlAlamiAqaratAppState extends State<AlAlamiAqaratApp> {
   }
 }
 
-class AppHomeScreen extends StatelessWidget {
+class AppHomeScreen extends StatefulWidget {
   final bool isDarkMode;
   final ValueChanged<bool> onThemeChanged;
   final double fontScale;
@@ -66,6 +66,69 @@ class AppHomeScreen extends StatelessWidget {
   });
 
   @override
+  State<AppHomeScreen> createState() => _AppHomeScreenState();
+}
+
+class _AppHomeScreenState extends State<AppHomeScreen> {
+  Future<void> showContractDialog(
+    BuildContext context,
+    String assetName,
+    String contractDetails,
+  ) async {
+    final continueToPortal = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          title: Text(
+            '📜 مسودة معلوماتية: $assetName',
+            style: const TextStyle(color: Colors.greenAccent),
+          ),
+          content: SingleChildScrollView(
+            child: Text(
+              contractDetails,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.white,
+                height: 1.5,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('قرأت المسودة وأتابع'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (!context.mounted || continueToPortal != true) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'تم اختيار متابعة العرض فقط. لم يتم توقيع عقد أو دفع مبلغ أو قفل صفقة.',
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -74,7 +137,7 @@ class AppHomeScreen extends StatelessWidget {
           'العالمي للعقارات الذكية 🏠',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 18 * fontScale,
+            fontSize: 18 * widget.fontScale,
             color: Colors.white,
           ),
         ),
@@ -90,22 +153,22 @@ class AppHomeScreen extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.text_increase, color: Colors.white),
-            onPressed: () => onFontScaleChanged(
-              fontScale + 0.1 <= 1.4 ? fontScale + 0.1 : 1.4,
+            onPressed: () => widget.onFontScaleChanged(
+              widget.fontScale + 0.1 <= 1.4 ? widget.fontScale + 0.1 : 1.4,
             ),
           ),
           IconButton(
             icon: const Icon(Icons.text_decrease, color: Colors.white),
-            onPressed: () => onFontScaleChanged(
-              fontScale - 0.1 >= 0.8 ? fontScale - 0.1 : 0.8,
+            onPressed: () => widget.onFontScaleChanged(
+              widget.fontScale - 0.1 >= 0.8 ? widget.fontScale - 0.1 : 0.8,
             ),
           ),
           IconButton(
             icon: Icon(
-              isDarkMode ? Icons.light_mode : Icons.dark_mode,
+              widget.isDarkMode ? Icons.light_mode : Icons.dark_mode,
               color: Colors.white,
             ),
-            onPressed: () => onThemeChanged(!isDarkMode),
+            onPressed: () => widget.onThemeChanged(!widget.isDarkMode),
           ),
         ],
       ),
@@ -118,7 +181,7 @@ class AppHomeScreen extends StatelessWidget {
             Text(
               'أهلاً بك في تطبيق الجوال الموحد والمصفى 🚀\nالمنصة مقسمة ومحمية بالكامل ضد تصوير الشاشة.',
               style: TextStyle(
-                fontSize: 16 * fontScale,
+                fontSize: 16 * widget.fontScale,
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
@@ -126,21 +189,38 @@ class AppHomeScreen extends StatelessWidget {
             const SizedBox(height: 30),
             // أزرار محاكاة الأقسام الأربعة الكبرى تفاعلياً
             ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () => showContractDialog(
+                context,
+                'المزاد العقاري',
+                'هذه مسودة معلوماتية لطلب المشاركة في مزاد عقاري. '
+                    'يلزم التحقق من تفاصيل الأصل والتراخيص والشروط بواسطة مختص قبل أي التزام. '
+                    'لا ينشئ العرض عقداً أو يثبت ملكية أو يخصم أي مبلغ.',
+              ),
               icon: const Icon(Icons.gavel),
               label: const Text('دخول قسم المزادات الفورية'),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
             ),
             const SizedBox(height: 10),
             ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () => showContractDialog(
+                context,
+                'الاجتماع المرئي العقاري',
+                'هذا ملخص معلوماتي لطلب اجتماع لمناقشة أصل عقاري. '
+                    'لا يمثل عقد وساطة أو تفويضاً، ولا يشارك بيانات خاصة أو ينشئ اجتماعاً فعلياً.',
+              ),
               icon: const Icon(Icons.video_call),
               label: const Text('بدء اجتماع مرئي (زووم عقاري)'),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo),
             ),
             const SizedBox(height: 10),
             ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () => showContractDialog(
+                context,
+                'البث المباشر للعقارات',
+                'هذا ملخص معلوماتي لطلب الانضمام إلى بث عقاري. '
+                    'تخضع معلومات الأصل وأي متطلبات نظامية لمراجعة مستقلة. '
+                    'المتابعة لا تعني اعتماداً أو توقيعاً أو فتح قناة تواصل.',
+              ),
               icon: const Icon(Icons.live_tv),
               label: const Text('الانضمام للبث المباشر للعقارات'),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),

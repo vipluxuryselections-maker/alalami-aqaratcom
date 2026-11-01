@@ -114,36 +114,45 @@ io.on('connection', (socket) => {
     socket.on('send_secure_message', (data) => { io.emit('receive_secure_message', data); });
 });
 
-const PORT = 10000; // المنفذ الرسمي للسحابة
-server.listen(PORT, () => console.log(`🚀 بورصة العالمي للأصول تعمل سحابياً بثبات على المنفذ ${PORT}`));
-// 🏢 محاكاة محرك الربط الرسمي مع الهيئة العامة للعقار وهيئة السوق المالية (Regulatory API Gateway)
+// معاينة لمسارات الخيارات فقط؛ لا يوجد اتصال فعلي بالجهات الحكومية أو المالية.
 app.post('/api/regulatory/mega-connect', (req, res) => {
-    const { userId, nationalId, propertyDeedNumber, chosenAction } = req.body;
-    // chosenAction: 'Sell', 'Rent', 'Mortgage', 'Develop', 'Invest'
-
-    if (!nationalId || nationalId.length !== 10) {
-        return res.status(400).json({ success: false, message: "يتطلب الربط الحكومي إدخال رقم هوية وطنية صحيح." });
-    }
-
-    console.log(`📡 [بوابة الامتثال الحكومي]: جاري التحقق من الصك ${propertyDeedNumber} عبر الهيئة العامة للعقار...`);
-    console.log(`📡 [بوابة الامتثال المالي]: جاري فحص مطابقة نظام الاستثمار والرهن مع هيئة السوق المالية (CMA) والبنك المركزي.`);
-
-    // تعريف بنية الخيارات الخمسة الكبرى للمواطن
-    const actionRoutes = {
-        Sell: { status: "Active_In_Exchange", message: "🚀 تم التحقق من الصك عبر هيئة العقار وطرحه للبيع التنافسي (سعي 1%)." },
-        Rent: { status: "Active_In_Ejaar", message: "📝 تم ربط العقار بنظام إيجار وجاري استقبال المستأجرين بنجاح." },
-        Mortgage: { status: "Awaiting_Bank_Offers", message: "🏦 تم إرسال الصك لشركات التمويل والبنك العقاري لتقديم عروض الرهن مسبوقة بالمسودة." },
-        Develop: { status: "Shared_With_Developers", message: "🤝 تم إدراج عقارك في قسم المطورين الكبار وشركاء الأرض للاتفاق التشغيلي." },
-        Invest: { status: "CMA_Compliant_Investment", message: "🪙 تم تحويل العقار إلى محفظة استثمارية مساهمة متوافقة مع لوائح هيئة السوق المالية." }
+    const { nationalId, propertyDeedNumber, chosenAction } = req.body ?? {};
+    const actionLabels = {
+        Sell: 'البيع',
+        Rent: 'التأجير',
+        Mortgage: 'الرهن العقاري',
+        Develop: 'التطوير',
+        Invest: 'الاستثمار',
     };
 
-    const result = actionRoutes[chosenAction] || { status: "Pending", message: "تم تسجيل الطلب في المنظومة." };
+    if (
+        typeof nationalId !== 'string' ||
+        !/^\d{10}$/.test(nationalId) ||
+        typeof propertyDeedNumber !== 'string' ||
+        !propertyDeedNumber.trim() ||
+        propertyDeedNumber.length > 100 ||
+        !Object.prototype.hasOwnProperty.call(actionLabels, chosenAction)
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: 'أدخل رقم هوية من 10 أرقام ورقم صك وخياراً صالحاً.',
+        });
+    }
 
     res.json({
         success: true,
-        deedStatus: "✓ صك إلكتروني موثق ونظامي",
+        previewOnly: true,
+        submittedToAuthorities: false,
+        deedVerified: false,
         currentAction: chosenAction,
-        systemStatus: result.status,
-        message: `${result.message}\n\nتنبيه: المنصة وسيط تقني وتخلو مسؤوليتها تماماً بموجب البند العام المعتمد للدولة. ⚖️`
+        actionLabel: actionLabels[chosenAction],
+        systemStatus: 'Not_Submitted',
+        deedStatus: 'لم يتم التحقق من الصك',
+        message: `هذه معاينة لمسار ${actionLabels[chosenAction]} فقط. لم يُرسل الطلب إلى أي جهة ولم تُتحقق الهوية أو الصك.`,
+        disclaimer:
+            'لا يوجد تكامل حكومي أو مالي مهيأ في هذا الخادم. لا تُرسل بيانات حقيقية قبل تهيئة التكامل الرسمي الآمن.',
     });
 });
+
+const PORT = 10000;
+server.listen(PORT, () => console.log(`API server listening on port ${PORT}`));

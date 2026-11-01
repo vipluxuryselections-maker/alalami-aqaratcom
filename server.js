@@ -1,9 +1,21 @@
+const crypto = require('node:crypto');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 
 const app = express();
+const platformAdminToken = process.env.PLATFORM_ADMIN_TOKEN;
+let platformSettings = {
+    bankAccounts: [],
+    contactNumbers: [],
+    socialMedia: {
+        twitter: '',
+        tiktok: '',
+        instagram: '',
+        email: '',
+    },
+};
 app.use(express.json());
 app.use(cors());
 app.use(express.static('public')); // تشغيل واجهة الموقع تلقائياً
@@ -33,8 +45,173 @@ let activeMeetings = {};
 // بند خلو مسؤولية المنصة القانوني الصارم (Disclaimers)
 const PLATFORM_LEGAL_DISCLAIMER = `بند خلو المسؤولية القانونية: منصة العالمي للاستثمار والعقارات هي وسيط تقني فقط يربط الأطراف. لا تتحمل المنصة أي مسؤولية قانونية، مالية، أو جنائية ناتجة عن الصفقات، الالتزامات، أو الاتفاقيات المبرمة بين الملاك، العملاء، السعاة، الجهات التمويلية (بنوك أو أفراد)، أو تجار الأصول (الذهب والأسهم والسكراب).`;
 
+function tokensMatch(providedToken, expectedToken) {
+    if (typeof providedToken !== 'string' || !expectedToken) {
+        return false;
+    }
+
+    const provided = Buffer.from(providedToken);
+    const expected = Buffer.from(expectedToken);
+    return provided.length === expected.length && crypto.timingSafeEqual(provided, expected);
+}
+
+function isNonEmptyString(value, maxLength) {
+    return typeof value === 'string' && value.trim().length > 0 && value.length <= maxLength;
+}
+
+function isValidSaudiIban(value) {
+    if (typeof value !== 'string' || !/^SA\d{22}$/i.test(value)) {
+        return false;
+    }
+
+    const rearrangedIban = `${value.slice(4)}${value.slice(0, 4).toUpperCase()}`;
+    let remainder = 0;
+    for (const character of rearrangedIban) {
+        const digits = character >= 'A' && character <= 'Z'
+            ? String(character.charCodeAt(0) - 55)
+            : character;
+        for (const digit of digits) {
+            remainder = (remainder * 10 + Number(digit)) % 97;
+        }
+    }
+    return remainder === 1;
+}
+
+function isValidPlatformSettingsPatch(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length === 0) {
+        return false;
+    }
+
+    const allowedFields = ['bankAccounts', 'contactNumbers', 'socialMedia'];
+    if (Object.keys(value).some((key) => !allowedFields.includes(key))) {
+        return false;
+    }
+
+    if (value.bankAccounts !== undefined && (
+        !Array.isArray(value.bankAccounts) ||
+        value.bankAccounts.length > 20 ||
+        !value.bankAccounts.every((account) =>
+            account &&
+            typeof account === 'object' &&
+            !Array.isArray(account) &&
+            Object.keys(account).every((key) => ['bankName', 'accountName', 'iban'].includes(key)) &&
+            isNonEmptyString(account.bankName, 100) &&
+            isNonEmptyString(account.accountName, 150) &&
+            isValidSaudiIban(account.iban)
+        )
+    )) {
+        return false;
+    }
+
+    if (value.contactNumbers !== undefined && (
+        !Array.isArray(value.contactNumbers) ||
+        value.contactNumbers.length > 20 ||
+        !value.contactNumbers.every((contact) =>
+            contact &&
+            typeof contact === 'object' &&
+            !Array.isArray(contact) &&
+            Object.keys(contact).every((key) => ['title', 'value'].includes(key)) &&
+            isNonEmptyString(contact.title, 100) &&
+            typeof contact.value === 'string' &&
+            contact.value.length <= 30 &&
+            /^\+?[\d\s()-]{7,30}$/.test(contact.value) &&
+            (contact.value.match(/\d/g) || []).length >= 7
+        )
+    )) {
+        return false;
+    }
+
+    if (value.socialMedia !== undefined) {
+        const social = value.socialMedia;
+        if (!social || typeof social !== 'object' || Array.isArray(social)) {
+            return false;
+        }
+        const socialFields = ['twitter', 'tiktok', 'instagram', 'email'];
+        if (Object.keys(social).some((key) => !socialFields.includes(key))) {
+            return false;
+        }
+        for (const key of ['twitter', 'tiktok', 'instagram']) {
+            if (social[key] !== undefined && social[key] !== '') {
+                if (!isNonEmptyString(social[key], 2048)) {
+                    return false;
+                }
+                try {
+                    if (new URL(social[key]).protocol !== 'https:') {
+                        return false;
+                    }
+                } catch {
+                    return false;
+                }
+            }
+        }
+        if (social.email !== undefined && social.email !== '' &&
+            (!isNonEmptyString(social.email, 254) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(social.email))) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 app.get('/api/health', (req, res) => {
     res.json({ success: true, service: 'aqarat-app-api' });
+});
+
+app.get('/api/platform/info', (req, res) => {
+    res.json({
+        success: true,
+        settings: platformSettings,
+    });
+});
+
+app.post('/api/admin/update-settings', (req, res) => {
+    if (!platformAdminToken) {
+        return res.status(503).json({
+            success: false,
+            code: 'PLATFORM_ADMIN_NOT_CONFIGURED',
+            message: 'تحديث الإعدادات غير متاح قبل تهيئة PLATFORM_ADMIN_TOKEN على الخادم.',
+        });
+    }
+
+    if (!tokensMatch(req.get('x-platform-admin-token'), platformAdminToken)) {
+        return res.status(403).json({
+            success: false,
+            message: 'غير مصرح بتعديل إعدادات المنصة.',
+        });
+    }
+
+    const { newSettings } = req.body || {};
+    if (!isValidPlatformSettingsPatch(newSettings)) {
+        return res.status(400).json({
+            success: false,
+            message: 'بيانات الإعدادات غير صالحة أو تحتوي حقولاً غير مدعومة.',
+        });
+    }
+
+    const nextSettings = { ...platformSettings };
+    if (newSettings.bankAccounts !== undefined) {
+        nextSettings.bankAccounts = newSettings.bankAccounts.map(({ bankName, accountName, iban }) => ({
+            bankName: bankName.trim(),
+            accountName: accountName.trim(),
+            iban: iban.toUpperCase(),
+        }));
+    }
+    if (newSettings.contactNumbers !== undefined) {
+        nextSettings.contactNumbers = newSettings.contactNumbers.map(({ title, value }) => ({
+            title: title.trim(),
+            value: value.trim(),
+        }));
+    }
+    if (newSettings.socialMedia !== undefined) {
+        nextSettings.socialMedia = { ...platformSettings.socialMedia, ...newSettings.socialMedia };
+    }
+
+    platformSettings = nextSettings;
+    return res.json({
+        success: true,
+        message: 'تم تحديث الإعدادات في ذاكرة الخادم فقط، وستُمسح عند إعادة تشغيله.',
+        currentSettings: platformSettings,
+    });
 });
 
 // 1. رابط تفعيل الاشتراكات الدورية

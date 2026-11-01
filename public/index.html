@@ -265,6 +265,23 @@
             background: var(--bg-color);
             white-space: pre-line;
         }
+        .platform-info-list {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-color);
+            overflow-wrap: anywhere;
+        }
+        .platform-info-entry + .platform-info-entry {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+        }
+        .platform-info-entry p { margin: 0 0 5px; }
+        .platform-info-links { display: flex; flex-wrap: wrap; gap: 12px; }
+        .platform-info-links a { color: #60a5fa; }
+        .platform-info-status { margin: 0; color: var(--text-muted); }
+        .platform-info-notice { margin-bottom: 12px; }
         .contract-modal-actions { display: flex; gap: 10px; margin-top: 20px; }
         .contract-modal-actions button { flex: 1; margin: 0; }
         .cancel-button { background: #b91c1c; }
@@ -432,6 +449,21 @@
                 <button class="secondary-button" type="button" disabled title="الخدمة غير متصلة بالخادم">إرسال المستندات — غير متاح حالياً</button>
             </section>
         </div>
+
+        <section class="section-box" aria-labelledby="platform-info-heading">
+            <h2 id="platform-info-heading">🏦 بيانات الحسابات وقنوات التواصل</h2>
+            <p class="compliance-note platform-info-notice">
+                البيانات المعروضة معلومات مقدمة من مشغّل المنصة وليست توثيقاً للحساب أو اعتماداً له. تحقق من هوية المستفيد وتفاصيل الدفع عبر قناة مستقلة قبل أي تحويل. الموقع لا يعالج المدفوعات.
+            </p>
+            <h3>الحسابات البنكية</h3>
+            <div class="platform-info-list" id="bank-accounts-view" role="status" aria-live="polite">
+                <p class="platform-info-status">جارٍ تحميل بيانات الحسابات...</p>
+            </div>
+            <h3>أرقام التواصل وروابط المنصة</h3>
+            <div class="platform-info-list" id="contacts-view" role="status" aria-live="polite">
+                <p class="platform-info-status">جارٍ تحميل قنوات التواصل...</p>
+            </div>
+        </section>
     </main>
     <div
         class="contract-modal"

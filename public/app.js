@@ -16,6 +16,8 @@ const contractText = document.getElementById('contract-text');
 const acceptContractButton = document.getElementById('accept-contract');
 const cancelContractButton = document.getElementById('cancel-contract');
 const complianceAssetType = document.getElementById('asset-type-flex');
+const bankAccountsView = document.getElementById('bank-accounts-view');
+const contactsView = document.getElementById('contacts-view');
 let pendingCompliancePayload = null;
 let modalPreviousFocus = null;
 let activeContractAsset = null;
@@ -262,6 +264,136 @@ async function checkApiHealth() {
   }
 }
 
+function addInfoEntry(container, values) {
+  const entry = document.createElement('div');
+  entry.className = 'platform-info-entry';
+  for (const [label, value] of values) {
+    const line = document.createElement('p');
+    const labelElement = document.createElement('strong');
+    labelElement.textContent = `${label}: `;
+    line.append(labelElement, document.createTextNode(value));
+    entry.append(line);
+  }
+  container.append(entry);
+}
+
+function createExternalLink(label, href) {
+  if (typeof href !== 'string' || !href) {
+    return null;
+  }
+
+  let url;
+  try {
+    url = new URL(href);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:') {
+    return null;
+  }
+
+  const link = document.createElement('a');
+  link.href = url.href;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = label;
+  return link;
+}
+
+async function loadPlatformInfo() {
+  try {
+    const response = await fetch('/api/platform/info', {
+      headers: { Accept: 'application/json' },
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data?.success !== true || !data.settings) {
+      throw new Error(
+        data?.message || `تعذر تحميل بيانات المنصة (HTTP ${response.status}).`,
+      );
+    }
+
+    const { bankAccounts, contactNumbers, socialMedia } = data.settings;
+    if (!Array.isArray(bankAccounts) || !Array.isArray(contactNumbers)) {
+      throw new Error('أعاد الخادم بيانات حسابات أو تواصل بتنسيق غير صالح.');
+    }
+
+    bankAccountsView.replaceChildren();
+    const validBankAccounts = bankAccounts.filter(
+      (account) =>
+        account &&
+        typeof account.bankName === 'string' &&
+        typeof account.accountName === 'string' &&
+        typeof account.iban === 'string',
+    );
+    if (validBankAccounts.length === 0) {
+      const emptyState = document.createElement('p');
+      emptyState.className = 'platform-info-status';
+      emptyState.textContent = 'لا توجد بيانات حسابات بنكية متاحة حالياً.';
+      bankAccountsView.append(emptyState);
+    } else {
+      for (const account of validBankAccounts) {
+        addInfoEntry(bankAccountsView, [
+          ['البنك', account.bankName],
+          ['اسم المستفيد', account.accountName],
+          ['IBAN', account.iban],
+        ]);
+      }
+    }
+
+    contactsView.replaceChildren();
+    const validContacts = contactNumbers.filter(
+      (contact) =>
+        contact &&
+        typeof contact.title === 'string' &&
+        typeof contact.value === 'string',
+    );
+    for (const contact of validContacts) {
+      addInfoEntry(contactsView, [[contact.title, contact.value]]);
+    }
+
+    const linksContainer = document.createElement('div');
+    linksContainer.className = 'platform-info-links';
+    const socialLabels = [
+      ['tiktok', 'TikTok'],
+      ['twitter', 'X'],
+      ['instagram', 'Instagram'],
+    ];
+    for (const [key, label] of socialLabels) {
+      const link = createExternalLink(label, socialMedia?.[key]);
+      if (link) {
+        linksContainer.append(link);
+      }
+    }
+    const email = socialMedia?.email;
+    if (typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      const emailLink = document.createElement('a');
+      emailLink.href = `mailto:${email}`;
+      emailLink.textContent = email;
+      linksContainer.append(emailLink);
+    }
+    if (linksContainer.childElementCount > 0) {
+      contactsView.append(linksContainer);
+    }
+    if (contactsView.childElementCount === 0) {
+      const emptyState = document.createElement('p');
+      emptyState.className = 'platform-info-status';
+      emptyState.textContent = 'لا توجد قنوات تواصل متاحة حالياً.';
+      contactsView.append(emptyState);
+    }
+  } catch (error) {
+    console.error('Platform info request failed:', error);
+    for (const container of [bankAccountsView, contactsView]) {
+      const errorMessage = document.createElement('p');
+      errorMessage.className = 'platform-info-status';
+      errorMessage.textContent =
+        error instanceof TypeError
+          ? 'تعذر الاتصال بالخادم لتحميل البيانات.'
+          : error.message;
+      container.replaceChildren(errorMessage);
+    }
+  }
+}
+
 async function submitMessage(event) {
   event.preventDefault();
   const messageText = chatInput.value.trim();
@@ -355,3 +487,4 @@ new MutationObserver(() => {
 chatForm.addEventListener('submit', submitMessage);
 updateEstimate();
 checkApiHealth();
+loadPlatformInfo();

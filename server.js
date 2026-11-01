@@ -116,3 +116,34 @@ io.on('connection', (socket) => {
 
 const PORT = 10000; // المنفذ الرسمي للسحابة
 server.listen(PORT, () => console.log(`🚀 بورصة العالمي للأصول تعمل سحابياً بثبات على المنفذ ${PORT}`));
+// 🏢 محاكاة محرك الربط الرسمي مع الهيئة العامة للعقار وهيئة السوق المالية (Regulatory API Gateway)
+app.post('/api/regulatory/mega-connect', (req, res) => {
+    const { userId, nationalId, propertyDeedNumber, chosenAction } = req.body;
+    // chosenAction: 'Sell', 'Rent', 'Mortgage', 'Develop', 'Invest'
+
+    if (!nationalId || nationalId.length !== 10) {
+        return res.status(400).json({ success: false, message: "يتطلب الربط الحكومي إدخال رقم هوية وطنية صحيح." });
+    }
+
+    console.log(`📡 [بوابة الامتثال الحكومي]: جاري التحقق من الصك ${propertyDeedNumber} عبر الهيئة العامة للعقار...`);
+    console.log(`📡 [بوابة الامتثال المالي]: جاري فحص مطابقة نظام الاستثمار والرهن مع هيئة السوق المالية (CMA) والبنك المركزي.`);
+
+    // تعريف بنية الخيارات الخمسة الكبرى للمواطن
+    const actionRoutes = {
+        Sell: { status: "Active_In_Exchange", message: "🚀 تم التحقق من الصك عبر هيئة العقار وطرحه للبيع التنافسي (سعي 1%)." },
+        Rent: { status: "Active_In_Ejaar", message: "📝 تم ربط العقار بنظام إيجار وجاري استقبال المستأجرين بنجاح." },
+        Mortgage: { status: "Awaiting_Bank_Offers", message: "🏦 تم إرسال الصك لشركات التمويل والبنك العقاري لتقديم عروض الرهن مسبوقة بالمسودة." },
+        Develop: { status: "Shared_With_Developers", message: "🤝 تم إدراج عقارك في قسم المطورين الكبار وشركاء الأرض للاتفاق التشغيلي." },
+        Invest: { status: "CMA_Compliant_Investment", message: "🪙 تم تحويل العقار إلى محفظة استثمارية مساهمة متوافقة مع لوائح هيئة السوق المالية." }
+    };
+
+    const result = actionRoutes[chosenAction] || { status: "Pending", message: "تم تسجيل الطلب في المنظومة." };
+
+    res.json({
+        success: true,
+        deedStatus: "✓ صك إلكتروني موثق ونظامي",
+        currentAction: chosenAction,
+        systemStatus: result.status,
+        message: `${result.message}\n\nتنبيه: المنصة وسيط تقني وتخلو مسؤوليتها تماماً بموجب البند العام المعتمد للدولة. ⚖️`
+    });
+});

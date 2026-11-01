@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة العالمي للعقارات</title>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --bg: #f4f6f9;
+            --card: #ffffff;
+            --text: #111827;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        /* نظام التبويب للأقسام الأربعة */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background: #e5e7eb;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            background: var(--card);
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        input,
+        select,
+        button {
+            padding: 10px;
+            margin-top: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #10b981;
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .calc-box {
+            background: #eff6ff;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-weight: bold;
+            color: #1e3a8a;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>منصة العالمي للعقارات الذكية 🏠</h1>
+            <p>نظام إلكتروني موحد يضمن حقوق الملاك، العملاء، السعاة، والمطورين</p>
+        </header>
+
+        <!-- أزرار التنقل بين الأقسام الأربعة بوضوح -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="openTab(event, 'client')">👤 قسم العميل</button>
+            <button class="tab-btn" onclick="openTab(event, 'owner')">🔑 قسم المالك</button>
+            <button class="tab-btn" onclick="openTab(event, 'broker')">💼 قسم السعاة</button>
+            <button class="tab-btn" onclick="openTab(event, 'developer')">👑 قسم المطور (أنت)</button>
+        </div>
+
+        <!-- 1. واجهة العميل -->
+        <div id="client" class="tab-content active">
+            <h2>مرحباً بك عزيزي العميل 👋</h2>
+            <p>يمكنك تصفح العقارات، استخدام البحث الصوتي، أو حساب التمويل المباشر.</p>
+            <div class="calc-box">🗣️ ميزة ذوي الاحتياجات الخاصة: <button onclick="speakText()"
+                    style="width:auto; margin:0 10px;">🔊 تشغيل القارئ الصوتي</button></div>
+        </div>
+
+        <!-- 2. واجهة المالك -->
+        <div id="owner" class="tab-content">
+            <h2>لوحة تحكم المالك والاشتراكات 🔑</h2>
+            <p>اختر الباقة المناسبة لرفع عقاراتك وتمييزها في المنصة:</p>
+            <select id="plan-type">
+                <option value="weekly">باقة أسبوعية - 29 ريال</option>
+                <option value="monthly">باقة شهرية - 99 ريال</option>
+                <option value="yearly">باقة سنوية - 799 ريال</option>
+            </select>
+            <button onclick="subscribePlan()">💳 تفعيل الاشتراك الدوري آلياً</button>
+        </div>
+
+        <!-- 3. واجهة السعاة وإتمام الصفقات -->
+        <div id="broker" class="tab-content">
+            <h2>إغلاق الصفقات وحساب السعي التلقائي 💼</h2>
+            <p>أدخل تفاصيل الصفقة لحساب نصيب المنصة وعمولة السعي فوراً:</p>
+            <input type="number" id="prop-price" oninput="calculateSaeiLive()" placeholder="أدخل سعر العقار بالكامل (ريال)">
+            <select id="deal-type" onchange="calculateSaeiLive()">
+                <option value="sale">صفقة بيع (سعي المنصة 1%)</option>
+                <option value="rent">صفقة إيجار سنوي (سعي المنصة 5%)</option>
+            </select>
+            <div class="calc-box" id="saei-result">نصيب المنصة التقريبي من السعي: 0 ريال</div>
+            <button onclick="submitDeal()">📥 توثيق الصفقة وإصدار الفاتورة</button>
+        </div>
+
+        <!-- 4. واجهة المطور (خاصة بك وأدمن خدمة العملاء) -->
+        <div id="developer" class="tab-content">
+            <h2>غرفة التحكم العليا للمطور والمشرفين 👑</h2>
+            <p>مراقبة جودة الدردشات، إدارة المحادثات المشفرة، ومتابعة الدعم الفني لخدمة العملاء.</p>
+            <div style="background:#1f2937; color:#10b981; padding:15px; border-radius:6px; font-family:monospace;"
+                id="monitor-box">
+                [نظام المراقبة آمن] في انتظار بدء المحادثات لحفظ الحقوق قانونياً...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openTab(event, tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        function calculateSaeiLive() {
+            const price = document.getElementById('prop-price').value || 0;
+            const type = document.getElementById('deal-type').value;
+            const rate = type === 'sale' ? 0.01 : 0.05;
+            document.getElementById('saei-result').innerText = `نصيب المنصة التقريبي من السعي: ${(price * rate).toLocaleString()} ريال`;
+        }
+
+        function submitDeal() {
+            const price = document.getElementById('prop-price').value;
+            const type = document.getElementById('deal-type').value;
+            fetch('/api/deals/complete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ propertyPrice: price, dealType: type })
+            })
+                .then(res => res.json()).then(data => alert(data.message));
+        }
+
+        function subscribePlan() {
+            const plan = document.getElementById('plan-type').value;
+            fetch('/api/subscriptions/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: 101, planType: plan })
+            })
+                .then(res => res.json()).then(data => alert(data.message));
+        }
+
+        function speakText() {
+            const utterance = new SpeechSynthesisUtterance("مرحباً بك في منصة العالمي للعقارات. تصفحك آمن مئة بالمئة");
+            utterance.lang = 'ar-SA';
+            window.speechSynthesis.speak(utterance);
+        }
+    </script>
+</body>
+
+</html>

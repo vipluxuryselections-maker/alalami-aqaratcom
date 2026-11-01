@@ -33,6 +33,10 @@ let activeMeetings = {};
 // بند خلو مسؤولية المنصة القانوني الصارم (Disclaimers)
 const PLATFORM_LEGAL_DISCLAIMER = `بند خلو المسؤولية القانونية: منصة العالمي للاستثمار والعقارات هي وسيط تقني فقط يربط الأطراف. لا تتحمل المنصة أي مسؤولية قانونية، مالية، أو جنائية ناتجة عن الصفقات، الالتزامات، أو الاتفاقيات المبرمة بين الملاك، العملاء، السعاة، الجهات التمويلية (بنوك أو أفراد)، أو تجار الأصول (الذهب والأسهم والسكراب).`;
 
+app.get('/api/health', (req, res) => {
+    res.json({ success: true, service: 'aqarat-app-api' });
+});
+
 // 1. رابط تفعيل الاشتراكات الدورية
 app.post('/api/subscriptions/subscribe', (req, res) => {
     const { userId, planType } = req.body;
@@ -41,48 +45,39 @@ app.post('/api/subscriptions/subscribe', (req, res) => {
     res.json({ success: true, message: `تم تفعيل ${plan.name} بنجاح! 💳` });
 });
 
-// 2. رابط حساب وتخصيص السعي وتوزيعه وقفل البيانات والشروط النظامية
+// 2. معاينة تقدير السعي؛ لا تتحقق من المستندات ولا تعتمد أو تسجل الصفقات.
 app.post('/api/compliance/validate-deal-flexible', (req, res) => {
-    const { 
-        assetType, price, userNationality, propertyLocation, licenseNumber, 
-        chamberOfCommerceStampAttached, isSuperDeveloperBypass, customSaeiAmount 
-    } = req.body;
+    const { assetType, price, customSaeiAmount } = req.body ?? {};
+    const rate = DEFAULT_SAEI_RATES[assetType];
+    const numericPrice = Number(price);
+    const numericCustomSaei = Number(customSaeiAmount);
 
-    // ميزة المرونة التجارية الفائقة للمطور (Bypass)
-    if (isSuperDeveloperBypass === true) {
-        const dealId = "DEAL_BYPASS_" + Math.random().toString(36).substr(2, 9);
-        let finalSaei = customSaeiAmount ? parseFloat(customSaeiAmount) : (price * 0.01);
-        return res.json({
-            success: true,
-            dealId,
-            calculatedSaei: finalSaei,
-            message: "✓ [تم التمرير بنجاح] صلاحية المطور الفائقة نشطة: تم قبول الصفقة وتمريرها استثنائياً وفتح قنوات التواصل والدردشة فوراً بمرونة تامة! 🔓"
-        });
-    }
-
-    const rule = ASSET_REGULATORY_RULES[assetType] || { requiredLicense: "رخصة معتمدة", saeiRate: 0.01 };
-
-    // فحص حظر تملك الأجانب بالحرمين
-    if (userNationality !== 'Saudi' && (assetType === 'realestate_sale' || assetType === 'realestate_rent') && (propertyLocation === 'Makkah' || propertyLocation === 'Madinah')) {
-        return res.status(403).json({
+    if (
+        typeof assetType !== 'string' ||
+        !Object.prototype.hasOwnProperty.call(DEFAULT_SAEI_RATES, assetType) ||
+        !Number.isFinite(numericPrice) ||
+        numericPrice <= 0 ||
+        (customSaeiAmount !== undefined &&
+            (!Number.isFinite(numericCustomSaei) || numericCustomSaei <= 0))
+    ) {
+        return res.status(400).json({
             success: false,
-            message: "🚨 حظر نظامي: تم قفل خيار الشراء المطلق لغير السعوديين في مكة والمدينة والتحويل التلقائي للإيجار والانتفاع."
+            message: 'أدخل نوع أصل معروفاً وسعراً موجباً صالحاً.',
         });
     }
 
-    if (!licenseNumber || licenseNumber.trim() === "") {
-        return res.status(422).json({ success: false, message: `🔒 خطوة نظامية معلقة: يرجى إدخال المتطلب النظامي: (${rule.requiredLicense})` });
-    }
+    const calculatedSaei = customSaeiAmount === undefined
+        ? numericPrice * rate
+        : numericCustomSaei;
 
-    const finalSaei = price * rule.saeiRate;
-    const dealId = "DEAL_" + Math.random().toString(36).substr(2, 9);
-
-    res.json({
+    res.status(202).json({
         success: true,
-        dealId,
-        calculatedSaei: finalSaei,
-        message: "✓ تم التحقق من الامتثال وتصديق ختم الغرفة التجارية بنجاح! تم قفل البيانات وحظر إظهار الأرقام حتى سداد قيمة السعي الصافي للمنصة. 🔒",
-        disclaimer: PLATFORM_LEGAL_DISCLAIMER
+        previewOnly: true,
+        complianceVerified: false,
+        dealCreated: false,
+        calculatedSaei,
+        message: 'تم حساب معاينة تقديرية فقط. لم يتم التحقق من المستندات أو اعتماد الصفقة أو تسجيل طلب مراجعة أو فتح بيانات التواصل.',
+        disclaimer: 'تقدير السعي لا يمثل اتفاقاً ملزماً أو طلب دفع.',
     });
 });
 

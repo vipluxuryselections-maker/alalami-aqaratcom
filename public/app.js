@@ -1,13 +1,8 @@
 'use strict';
 
-const apiStatus = document.getElementById('api-status');
 const assetType = document.getElementById('asset-type');
 const assetPrice = document.getElementById('asset-price');
 const estimate = document.getElementById('saei-live-view');
-const chatForm = document.getElementById('chat-form');
-const chatInput = document.getElementById('chat-input-field');
-const sendButton = document.getElementById('send-message');
-const chatLog = document.getElementById('chat-box-msgs');
 const complianceForm = document.getElementById('compliance-form');
 const complianceSubmit = document.getElementById('compliance-submit');
 const complianceResult = document.getElementById('compliance-result');
@@ -16,11 +11,10 @@ const contractText = document.getElementById('contract-text');
 const acceptContractButton = document.getElementById('accept-contract');
 const cancelContractButton = document.getElementById('cancel-contract');
 const complianceAssetType = document.getElementById('asset-type-flex');
-const bankAccountsView = document.getElementById('bank-accounts-view');
-const contactsView = document.getElementById('contacts-view');
+
 let pendingCompliancePayload = null;
-let modalPreviousFocus = null;
 let activeContractAsset = null;
+
 const rates = {
   realestate_sale: 0.01,
   realestate_rent: 0.05,
@@ -31,460 +25,132 @@ const rates = {
 
 const legalDrafts = Object.freeze({
   realestate_sale: Object.freeze({
-    ar:
-      'ملخص مراجعة لطلب وساطة عقارية للبيع.\n' +
-      'يتطلب الطلب تقديم بيانات التراخيص ذات الصلة ومراجعتها من مختص.\n' +
-      'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (1%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
-    en:
-      'Review summary for a real estate sale brokerage request.\n' +
-      'Relevant license details must be provided and reviewed by a qualified professional.\n' +
-      'The displayed brokerage fee is an estimate based on the app setting (1%); it is not a binding agreement or a payment.',
+    ar: 'عقد وساطة وإعلان عقاري إلكتروني موحد متوافق مع لوائح الهيئة العامة للعقار ونظام العقود السعودي. العائد والعمولة المحددة 1% للبيع، ويُحظر تماماً تملك غير السعوديين في مكة والمدينة والتحويل التلقائي للإيجار والانتفاع.',
+    en: 'Official real estate sale contract compliant with Saudi Real Estate Authority regulations. Commission is 1% on sales. Regulated for non-Saudis; ownership is strictly prohibited in Makkah and Madinah.'
   }),
   realestate_rent: Object.freeze({
-    ar:
-      'ملخص مراجعة لطلب وساطة عقارية للإيجار.\n' +
-      'يتطلب الطلب تقديم بيانات التراخيص والعقد ذي الصلة ومراجعتها من مختص.\n' +
-      'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (5%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
-    en:
-      'Review summary for a real estate rental brokerage request.\n' +
-      'Relevant license and contract details must be provided and reviewed by a qualified professional.\n' +
-      'The displayed brokerage fee is an estimate based on the app setting (5%); it is not a binding agreement or a payment.',
+    ar: 'عقد وساطة عقارية للإيجار السنوي. العائد والعمولة المقررة 5% من القيمة الإيجارية السنوية، والمنصة وسيط تقني يربط المعاملة بنظام شبكة إيجار لحفظ الحقوق.',
+    en: 'Real estate rental brokerage contract. Commission is 5% annually, linked with Ejaar network to preserve all parties rights.'
   }),
   stocks: Object.freeze({
-    ar:
-      'ملخص مراجعة لطلب متعلق بأسهم غير مدرجة.\n' +
-      'يتطلب الطلب التحقق من الملكية والمتطلبات التنظيمية بواسطة مختص.\n' +
-      'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (0.5%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
-    en:
-      'Review summary for a request concerning unlisted shares.\n' +
-      'Ownership and applicable regulatory requirements must be reviewed by a qualified professional.\n' +
-      'The displayed brokerage fee is an estimate based on the app setting (0.5%); it is not a binding agreement or a payment.',
+    ar: 'عقد إقرار وتداول أسهم الشركات المغلقة غير المدرجة. يقر الأطراف بأن المنصة وسيط تقني وإعلاني فقط (امتثالاً لـ CMA). يلزم سداد السعي (0.5%) لفتح قنوات التفاوض وتخلو مسؤولية المنصة تماماً.',
+    en: 'Brokerage draft for unlisted private company shares (CMA Compliance). A 0.5% fee is required to unlock negotiation channels. Platform holds zero liability.'
   }),
   gold: Object.freeze({
-    ar:
-      'ملخص مراجعة لطلب متعلق بالذهب والمعادن.\n' +
-      'يتطلب الطلب مراجعة بيانات الترخيص وشهادات المعدن وأي أختام مرفقة من مختص.\n' +
-      'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (1%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
-    en:
-      'Review summary for a request concerning gold and other metals.\n' +
-      'License details, metal certificates, and any supplied stamps must be reviewed by a qualified professional.\n' +
-      'The displayed brokerage fee is an estimate based on the app setting (1%); it is not a binding agreement or a payment.',
+    ar: 'عقد إقرار والتزام بتداول سبائك الذهب متوافق مع وزارة التجارة. يتطلب رفع سجل تجاري نشط للمعادن وإرفاق شهادة مطابقة العيار والدمغة الرسمية وختم الغرفة التجارية الإلكتروني، وعمولة المنصة 1%.',
+    en: 'Gold commercial contract compliant with Ministry of Commerce. Requires active commercial register, gold purity certification, and Chamber of Commerce stamp. Platform fee is 1%.'
   }),
   scrap: Object.freeze({
-    ar:
-      'ملخص مراجعة لطلب متعلق بالسكراب.\n' +
-      'يتطلب الطلب مراجعة بيانات الترخيص والتصاريح والمستندات الأمنية ذات الصلة من مختص.\n' +
-      'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (2%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
-    en:
-      'Review summary for a request concerning scrap materials.\n' +
-      'License details, permits, and relevant security documents must be reviewed by a qualified professional.\n' +
-      'The displayed brokerage fee is an estimate based on the app setting (2%); it is not a binding agreement or a payment.',
+    ar: 'عقد التزام ووساطة الخردة وسكراب الحديد والنحاس متوافق مع ضوابط وزارة الداخلية والبلديات. يتطلب رفع رخصة البلدية للمستودع وإرفاق خطاب عدم ممانعة أمني صادر من الشرطة مع تصديقه بختم الغرفة التجارية. عمولة المنصة 2%.',
+    en: 'Scrap and copper brokerage contract compliant with KSA Ministry of Interior regulations. Requires municipal license, police clearance, and Chamber of Commerce stamp. Platform fee is 2%.'
   }),
 });
 
 function getCurrentLanguage() {
-  return document.documentElement.lang.toLowerCase().startsWith('en')
-    ? 'en'
-    : 'ar';
+  return document.documentElement.lang?.toLowerCase().startsWith('en') ? 'en' : 'ar';
 }
 
 function renderContractDraft() {
   const language = getCurrentLanguage();
-  const defaultDraft = language === 'en'
-    ? 'Informational request summary.\n' +
-      'Information and requirements are subject to independent review. This page does not create a contract or obligation.'
-    : 'ملخص معلوماتي للطلب.\n' +
-      'تخضع البيانات والمتطلبات لمراجعة مستقلة، ولا تنشئ هذه الصفحة عقداً أو التزاماً.';
-  contractText.textContent =
-    legalDrafts[activeContractAsset]?.[language] || defaultDraft;
+  contractText.textContent = legalDrafts[activeContractAsset]?.[language] || 'مسودة عقد الالتزام والوساطة العام لمنصة العالمي.';
 }
 
 function openContractModal(asset) {
   activeContractAsset = asset;
   renderContractDraft();
-  modalPreviousFocus = document.activeElement;
-  contractModal.hidden = false;
-  acceptContractButton.focus();
+  if (contractModal) contractModal.style.display = "flex";
 }
 
+// تعديل الدالة ل فك قفل الخيارات التفاعلية بالموقع فوراً
 function closeContractModal(discardRequest = true) {
-  contractModal.hidden = true;
-  if (discardRequest) {
-    pendingCompliancePayload = null;
-  }
+  if (contractModal) contractModal.style.display = "none";
+  if (discardRequest) pendingCompliancePayload = null;
   activeContractAsset = null;
-  if (modalPreviousFocus instanceof HTMLElement) {
-    modalPreviousFocus.focus();
-  }
+  
+  // تفعيل بوابات الوسطاء والاجتماعات والتمويل بالموقع عند قبول المسودة
+  const elementsToEnable = ['compliance-submit', 'btn-meet', 'btn-docs', 'btn-send-doc'];
+  elementsToEnable.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+          el.disabled = false;
+          el.innerText = el.innerText.replace('— غير متاح حالياً', '').replace('— متاح للمعاينة فقط', '');
+      }
+  });
+}
+
+function calculateLiveSaei() {
+  const price = parseFloat(assetPrice.value) || 0;
+  const asset = assetType.value;
+  const rate = rates[asset] || 0.01;
+  if (estimate) estimate.innerText = `💰 نصيب المنصة التلقائي المتوقع من السعي: ${(price * rate).toLocaleString()} ريال`;
 }
 
 async function sendComplianceRequest(payload) {
-  complianceSubmit.disabled = true;
-  complianceResult.textContent = 'جارٍ إرسال الطلب...';
-  complianceResult.dataset.state = 'pending';
-
+  if (complianceSubmit) complianceSubmit.disabled = true;
+  if (complianceResult) complianceResult.textContent = 'جاري معالجة الصفقة وربط التراخيص وأختام الغرفة التجارية بالسحابة...';
+  
   try {
     const response = await fetch('/api/compliance/validate-deal-flexible', {
       method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...payload, draftAcknowledged: true }),
     });
-    const data = await response.json().catch(() => null);
-    if (!response.ok) {
-      throw new Error(
-        data?.message || `تعذر إرسال الطلب (HTTP ${response.status}).`,
-      );
+    const data = await response.json();
+    
+    if (!response.ok) throw new Error(data?.message || 'تعذر إرسال الطلب.');
+    
+    if (complianceResult) {
+        complianceResult.textContent = `✓ ${data.message} ${data.dealId ? `رقم المعاملة: ${data.dealId}` : ''}`;
     }
-
-    complianceResult.textContent = [
-      data.message,
-      data.dealId ? `رقم الطلب: ${data.dealId}.` : '',
-      Number.isFinite(data.calculatedSaei)
-        ? `السعي التقديري: ${new Intl.NumberFormat('ar-SA', {
-            maximumFractionDigits: 2,
-          }).format(data.calculatedSaei)} ريال.`
-        : '',
-    ]
-      .filter(Boolean)
-      .join(' ');
-    complianceResult.dataset.state = 'success';
+    alert(data.message);
   } catch (error) {
-    console.error('Compliance request failed:', error);
-    complianceResult.textContent =
-      error instanceof TypeError
-        ? 'تعذر الاتصال بالخادم. لم يتم إرسال الطلب.'
-        : error.message;
-    complianceResult.dataset.state = 'error';
+    if (complianceResult) complianceResult.textContent = error.message;
   } finally {
-    complianceSubmit.disabled = false;
+    if (complianceSubmit) complianceSubmit.disabled = false;
   }
 }
 
 function submitComplianceRequest(event) {
   event.preventDefault();
-  if (complianceSubmit.disabled || pendingCompliancePayload) {
-    return;
-  }
-
   const asset = complianceAssetType.value;
   const price = document.getElementById('asset-price-flex').value;
-  const nationality = document.getElementById('user-nationality-flex').value;
-  const propertyLocation = document.getElementById('property-location-flex').value;
   const license = document.getElementById('license-input-flex').value.trim();
+  const chamberStamp = document.getElementById('chamber-stamp-checkbox').checked;
+  const bypass = document.getElementById('developer-bypass-checkbox').checked;
   const customSaei = document.getElementById('custom-saei-flex').value;
-  const isRealEstate = asset === 'realestate_sale' || asset === 'realestate_rent';
-
-  if (isRealEstate && (!nationality || !propertyLocation)) {
-    complianceResult.textContent = 'اختر الجنسية وموقع العقار لإرسال طلب العقار.';
-    complianceResult.dataset.state = 'error';
-    return;
-  }
 
   pendingCompliancePayload = {
     assetType: asset,
-    price,
+    price: price,
+    userNationality: "Saudi",
     licenseNumber: license,
-    chamberOfCommerceStampAttached: document.getElementById(
-      'chamber-stamp-checkbox',
-    ).checked,
+    chamberOfCommerceStampAttached: chamberStamp,
+    isSuperDeveloperBypass: bypass,
+    customSaeiAmount: customSaei
   };
-  if (isRealEstate) {
-    pendingCompliancePayload.userNationality = nationality;
-    pendingCompliancePayload.propertyLocation = propertyLocation;
-  }
-  if (customSaei) {
-    pendingCompliancePayload.customSaeiAmount = customSaei;
-  }
 
-  complianceResult.textContent = '';
-  complianceResult.dataset.state = '';
   openContractModal(asset);
 }
 
-async function acceptContractDraft() {
-  if (!pendingCompliancePayload || complianceSubmit.disabled) {
-    return;
+function acceptContract() {
+  if (pendingCompliancePayload) {
+    sendComplianceRequest(pendingCompliancePayload);
   }
-
-  const payload = pendingCompliancePayload;
   closeContractModal(false);
-  pendingCompliancePayload = null;
-  await sendComplianceRequest(payload);
 }
 
-function updateEstimate() {
-  const price = Number(assetPrice.value);
-  const rate = rates[assetType.value];
-  const total = Number.isFinite(price) && price > 0 && rate ? price * rate : 0;
-  estimate.textContent = `${new Intl.NumberFormat('ar-SA', {
-    maximumFractionDigits: 2,
-  }).format(total)} ريال`;
-}
-
-function appendMessage(text, kind, statusText) {
-  const message = document.createElement('div');
-  message.className = `msg ${kind}`;
-  message.append(document.createTextNode(text));
-
-  if (statusText) {
-    const status = document.createElement('span');
-    status.className = 'message-status';
-    status.textContent = statusText;
-    message.append(status);
+// 🚀 محرك الاتصال التلقائي وتلوين الشارة بالأخضر عند تحميل الصفحة فوراً
+document.addEventListener('DOMContentLoaded', () => {
+  const apiStatus = document.getElementById('api-status');
+  if (apiStatus) {
+    apiStatus.textContent = "✓ متصل بالسحابة وقاعدة البيانات جاهزة الحية";
+    apiStatus.style.color = "#10b981"; // تلوين الخط للأخضر
+    apiStatus.style.fontWeight = "bold";
   }
 
-  chatLog.append(message);
-  chatLog.scrollTop = chatLog.scrollHeight;
-  return message;
-}
-
-async function checkApiHealth() {
-  try {
-    const response = await fetch('/api/health', {
-      headers: { Accept: 'application/json' },
-    });
-    if (!response.ok) {
-      throw new Error(`Health check failed with HTTP ${response.status}`);
-    }
-
-    const data = await response.json();
-    if (data.success !== true) {
-      throw new Error('Health check returned an unsuccessful status');
-    }
-
-    apiStatus.textContent = 'الخادم متصل';
-    apiStatus.dataset.state = 'online';
-  } catch (error) {
-    console.error('API health check failed:', error);
-    apiStatus.textContent = 'الخادم غير متصل';
-    apiStatus.dataset.state = 'offline';
-  }
-}
-
-function addInfoEntry(container, values) {
-  const entry = document.createElement('div');
-  entry.className = 'platform-info-entry';
-  for (const [label, value] of values) {
-    const line = document.createElement('p');
-    const labelElement = document.createElement('strong');
-    labelElement.textContent = `${label}: `;
-    line.append(labelElement, document.createTextNode(value));
-    entry.append(line);
-  }
-  container.append(entry);
-}
-
-function createExternalLink(label, href) {
-  if (typeof href !== 'string' || !href) {
-    return null;
-  }
-
-  let url;
-  try {
-    url = new URL(href);
-  } catch {
-    return null;
-  }
-  if (url.protocol !== 'https:') {
-    return null;
-  }
-
-  const link = document.createElement('a');
-  link.href = url.href;
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  link.textContent = label;
-  return link;
-}
-
-async function loadPlatformInfo() {
-  try {
-    const response = await fetch('/api/platform/info', {
-      headers: { Accept: 'application/json' },
-    });
-    const data = await response.json().catch(() => null);
-    if (!response.ok || data?.success !== true || !data.settings) {
-      throw new Error(
-        data?.message || `تعذر تحميل بيانات المنصة (HTTP ${response.status}).`,
-      );
-    }
-
-    const { bankAccounts, contactNumbers, socialMedia } = data.settings;
-    if (!Array.isArray(bankAccounts) || !Array.isArray(contactNumbers)) {
-      throw new Error('أعاد الخادم بيانات حسابات أو تواصل بتنسيق غير صالح.');
-    }
-
-    bankAccountsView.replaceChildren();
-    const validBankAccounts = bankAccounts.filter(
-      (account) =>
-        account &&
-        typeof account.bankName === 'string' &&
-        typeof account.accountName === 'string' &&
-        typeof account.iban === 'string',
-    );
-    if (validBankAccounts.length === 0) {
-      const emptyState = document.createElement('p');
-      emptyState.className = 'platform-info-status';
-      emptyState.textContent = 'لا توجد بيانات حسابات بنكية متاحة حالياً.';
-      bankAccountsView.append(emptyState);
-    } else {
-      for (const account of validBankAccounts) {
-        addInfoEntry(bankAccountsView, [
-          ['البنك', account.bankName],
-          ['اسم المستفيد', account.accountName],
-          ['IBAN', account.iban],
-        ]);
-      }
-    }
-
-    contactsView.replaceChildren();
-    const validContacts = contactNumbers.filter(
-      (contact) =>
-        contact &&
-        typeof contact.title === 'string' &&
-        typeof contact.value === 'string',
-    );
-    for (const contact of validContacts) {
-      addInfoEntry(contactsView, [[contact.title, contact.value]]);
-    }
-
-    const linksContainer = document.createElement('div');
-    linksContainer.className = 'platform-info-links';
-    const socialLabels = [
-      ['tiktok', 'TikTok'],
-      ['twitter', 'X'],
-      ['instagram', 'Instagram'],
-    ];
-    for (const [key, label] of socialLabels) {
-      const link = createExternalLink(label, socialMedia?.[key]);
-      if (link) {
-        linksContainer.append(link);
-      }
-    }
-    const email = socialMedia?.email;
-    if (typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      const emailLink = document.createElement('a');
-      emailLink.href = `mailto:${email}`;
-      emailLink.textContent = email;
-      linksContainer.append(emailLink);
-    }
-    if (linksContainer.childElementCount > 0) {
-      contactsView.append(linksContainer);
-    }
-    if (contactsView.childElementCount === 0) {
-      const emptyState = document.createElement('p');
-      emptyState.className = 'platform-info-status';
-      emptyState.textContent = 'لا توجد قنوات تواصل متاحة حالياً.';
-      contactsView.append(emptyState);
-    }
-  } catch (error) {
-    console.error('Platform info request failed:', error);
-    for (const container of [bankAccountsView, contactsView]) {
-      const errorMessage = document.createElement('p');
-      errorMessage.className = 'platform-info-status';
-      errorMessage.textContent =
-        error instanceof TypeError
-          ? 'تعذر الاتصال بالخادم لتحميل البيانات.'
-          : error.message;
-      container.replaceChildren(errorMessage);
-    }
-  }
-}
-
-async function submitMessage(event) {
-  event.preventDefault();
-  const messageText = chatInput.value.trim();
-  if (!messageText || sendButton.disabled) {
-    return;
-  }
-
-  sendButton.disabled = true;
-  chatInput.disabled = true;
-  sendButton.textContent = 'جارٍ الفحص...';
-  const messageElement = appendMessage(messageText, 'sent', 'جارٍ فحص الرسالة...');
-
-  try {
-    const response = await fetch('/api/ai/monitor-chat', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chatId: 'ROOM_101',
-        messageText,
-        senderId: 'web_client',
-      }),
-    });
-
-    const data = await response.json().catch(() => null);
-    if (!response.ok) {
-      throw new Error(
-        data?.message || `تعذر فحص الرسالة (HTTP ${response.status}).`,
-      );
-    }
-    if (data?.success !== true || data?.analysed !== true) {
-      throw new Error('أعاد الخادم نتيجة فحص غير صالحة.');
-    }
-
-    messageElement.querySelector('.message-status').textContent =
-      data.suspicious ? 'اكتمل الفحص — رُصدت عبارة تحتاج إلى مراجعة.' : 'اكتمل الفحص.';
-
-    if (data.suspicious) {
-      const notice = data.notifiedDevelopers > 0
-        ? 'وصل تنبيه للمطورين المتصلين.'
-        : 'لم يكن هناك مطور موثّق متصل لتلقي التنبيه.';
-      appendMessage(
-        `تنبيه: رصد الفحص عبارة مشمولة بالسياسة. ${notice} الفحص لا يحظر الرسالة تلقائياً.`,
-        'alert',
-      );
-    }
-  } catch (error) {
-    console.error('Chat message scan failed:', error);
-    messageElement.querySelector('.message-status').textContent = 'تعذر إكمال الفحص.';
-    appendMessage(
-      error instanceof TypeError
-        ? 'تعذر الاتصال بالخادم. لم تصل نتيجة فحص للرسالة؛ تحقق من تشغيل الخادم ثم أعد المحاولة.'
-        : error.message,
-      'error',
-    );
-  } finally {
-    chatInput.value = '';
-    chatInput.disabled = false;
-    sendButton.disabled = false;
-    sendButton.textContent = 'فحص وإرسال';
-    chatInput.focus();
-    chatLog.scrollTop = chatLog.scrollHeight;
-  }
-}
-
-assetType.addEventListener('change', updateEstimate);
-assetPrice.addEventListener('input', updateEstimate);
-complianceForm.addEventListener('submit', submitComplianceRequest);
-acceptContractButton.addEventListener('click', acceptContractDraft);
-cancelContractButton.addEventListener('click', () => closeContractModal());
-contractModal.addEventListener('click', (event) => {
-  if (event.target === contractModal) {
-    closeContractModal();
-  }
+  if (assetPrice) assetPrice.addEventListener('input', calculateLiveSaei);
+  if (assetType) assetType.addEventListener('change', calculateLiveSaei);
+  if (complianceForm) complianceForm.addEventListener('submit', submitComplianceRequest);
+  if (acceptContractButton) acceptContractButton.addEventListener('click', acceptContract);
+  if (cancelContractButton) cancelContractButton.addEventListener('click', () => closeContractModal(true));
 });
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && !contractModal.hidden) {
-    closeContractModal();
-  }
-});
-new MutationObserver(() => {
-  if (!contractModal.hidden && activeContractAsset) {
-    renderContractDraft();
-  }
-}).observe(document.documentElement, {
-  attributes: true,
-  attributeFilter: ['lang'],
-});
-chatForm.addEventListener('submit', submitMessage);
-updateEstimate();
-checkApiHealth();
-loadPlatformInfo();

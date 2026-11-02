@@ -15,8 +15,26 @@ const io = new Server(server, { cors: { origin: "*" } });
 // 🔌 إعداد الاتصال المشفر والآمن بقاعدة بيانات Postgres السحابية
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false } // إجباري لتشفير البيانات السحابية ومنع الاختراق لحماية الصكوك
+    ssl: { rejectUnauthorized: false } // إجباري لتشفير البيانات السحابية ومنع الاختراق لحماية الصكوك والعمولات
 });
+
+// 🏦 لوحة التحكم والإعدادات الحصرية للمطور المالك (صلاحية كاملة للتعديل والحذف والإضافة مستقبلاً)
+let platformSettings = {
+    bankAccounts: [
+        { bankName: "البنك الأهلي السعودي (SNB)", accountName: "شركة بورصة العالمي للاستثمار", iban: "SA6210000000000000000000" },
+        { bankName: "مصرف الراجحي (Al Rajhi)", accountName: "شركة بورصة العالمي للاستثمار", iban: "SA8000000000000000000000" }
+    ],
+    contactNumbers: [
+        { title: "الرقم الموحد المعتمد", value: "920000000" },
+        { title: "الدعم الفني عبر الواتساب", value: "+966500000000" }
+    ],
+    socialMedia: {
+        twitter: "https://x.com",
+        tiktok: "https://tiktok.com",
+        instagram: "https://instagram.com",
+        email: "support@alalami-aqaratcom.com"
+    }
+};
 
 // محرك الأتمتة: إنشاء جداول السعاة والصفقات تلقائياً في السحابة عند تشغيل السيرفر
 async function initDatabaseTables() {
@@ -59,6 +77,21 @@ const DEFAULT_SAEI_RATES = {
 };
 
 const PLATFORM_LEGAL_DISCLAIMER = `بند خلو المسؤولية القانونية: منصة العالمي للاستثمار والعقارات هي وسيط تقني فقط يربط الأطراف. ولا تتحمل المنصة أي مسؤولية قانونية أو مالية أو جنائية ناتجة عن الاتفاقيات بين الملاك والعملاء والجهات التمويلية.`;
+
+// رابط عام يتيح للموقع وتطبيق الجوال سحب بيانات التواصل والبنك تلقائياً وعرضها للمستخدمين
+app.get('/api/platform/info', (req, res) => {
+    res.json({ success: true, settings: platformSettings });
+});
+
+// رابط سري وخاص بك لتحديث أو إضافة أو حذف البيانات البنكية والتواصل برمشة عين
+app.post('/api/admin/update-settings', (req, res) => {
+    const { secretAdminToken, newSettings } = req.body;
+    if (secretAdminToken !== "SUPER_ADMIN_ALALAMI_2026") {
+        return res.status(403).json({ success: false, message: "غير مصرح لك بتعديل بيانات المنصة المالية." });
+    }
+    platformSettings = { ...platformSettings, ...newSettings };
+    res.json({ success: true, message: "✓ تم تحديث وإضافة البيانات البنكية والتواصل بنجاح وتفعيلها فوراً! 🔓", currentSettings: platformSettings });
+});
 
 // رابط حفظ وتسجيل مسوق/ساعي جديد فعلياً في قاعدة البيانات السحابية
 app.post('/api/brokers/add', async (req, res) => {

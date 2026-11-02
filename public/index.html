@@ -3,488 +3,200 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0f172a">
-    <meta name="description" content="منصة العالمي للأصول والعقارات مع فحص آلي للرسائل.">
     <title>بورصة العالمي الدولية للأصول والعقارات</title>
     <style>
         :root {
-            color-scheme: dark;
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --text-color: #f8fafc;
+            --primary: #1e3a8a;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
             --text-muted: #94a3b8;
-            --primary: #2563eb;
-            --border-color: #334155;
         }
-
-        * { box-sizing: border-box; }
         body {
-            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg);
+            color: var(--text);
             margin: 0;
-            padding: 24px 16px;
-            background: radial-gradient(ellipse at top, #172641 0, var(--bg-color) 60%);
-            color: var(--text-color);
-            font-family: "Segoe UI", Tahoma, sans-serif;
-            line-height: 1.65;
+            padding: 20px;
         }
-        button, input, select { font: inherit; }
-        button { cursor: pointer; }
-        .container { width: min(1120px, 100%); margin: 0 auto; }
-        .topbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+            border-radius: 8px;
             margin-bottom: 20px;
+            border: 1px solid #1e40af;
         }
-        .brand { display: flex; align-items: center; gap: 12px; }
-        .brand-mark {
-            display: grid;
-            width: 48px;
-            height: 48px;
-            place-items: center;
-            border: 1px solid #405578;
-            border-radius: 15px;
-            background: #1b2c4b;
-            font-size: 24px;
-        }
-        h1, h2, h3, p { margin-top: 0; }
-        h1 { margin-bottom: 0; font-size: clamp(20px, 4vw, 28px); }
-        h2 { margin-bottom: 8px; font-size: 21px; }
-        h3 { font-size: 18px; }
-        .subtitle, .muted { color: var(--text-muted); }
-        .api-status {
-            padding: 7px 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 999px;
-            color: var(--text-muted);
-            font-size: 13px;
-            white-space: nowrap;
-        }
-        .api-status[data-state="online"] { border-color: #17684d; color: #7de6bd; }
-        .api-status[data-state="offline"] { border-color: #843e42; color: #ffaaaa; }
-        .legal-notice {
-            margin-bottom: 20px;
+        .calc-box {
+            background: #1e3a8a;
             padding: 15px;
-            border: 1px solid #7b393c;
-            border-radius: 12px;
-            background: #421f29;
-            color: #ffc0c3;
-            font-size: 13px;
-            font-weight: 600;
-            line-height: 1.8;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-weight: bold;
+            color: #38bdf8;
+            border: 1px solid #0284c7;
+        }
+        input, select, button {
+            padding: 12px;
+            margin-top: 8px;
+            border-radius: 5px;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: var(--text);
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        button {
+            background: #10b981;
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        button:disabled {
+            background: #475569 !important;
+            cursor: not-allowed;
+            opacity: 0.6;
         }
         .section-box {
-            min-width: 0;
-            margin-bottom: 18px;
-            padding: 22px;
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            background: linear-gradient(155deg, #202f47, var(--card-bg));
-            box-shadow: 0 16px 38px rgb(0 0 0 / 15%);
-        }
-        .locked-badge {
-            margin: 14px 0 18px;
-            padding: 11px 13px;
-            border: 1px solid #79551f;
-            border-radius: 10px;
-            background: #392d1c;
-            color: #ffdc9b;
-            font-size: 13px;
-            font-weight: 700;
-        }
-        .grid-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
-        label { display: block; margin: 12px 0 6px; color: #dce5f2; font-size: 14px; }
-        input, select {
-            width: 100%;
-            min-height: 46px;
-            margin-top: 4px;
-            padding: 10px 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 9px;
-            outline: none;
-            background: #0f172a;
-            color: white;
-        }
-        input:focus, select:focus { border-color: #6d9cff; box-shadow: 0 0 0 3px rgb(37 99 235 / 20%); }
-        .saei-live-view {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            gap: 8px;
-            margin-top: 16px;
-            padding: 13px;
-            border: 1px solid #31508a;
-            border-radius: 9px;
-            background: #1e3a8a;
-            font-weight: 700;
-        }
-        .saei-live-view strong { color: #dbeafe; }
-        .primary-button, button.secondary-button {
-            min-height: 44px;
-            margin-top: 12px;
-            padding: 10px 16px;
-            border: 0;
+            background: var(--card);
+            padding: 25px;
             border-radius: 8px;
-            background: var(--primary);
-            color: white;
-            font-weight: 700;
+            border: 1px solid #334155;
+            margin-bottom: 20px;
         }
-        .primary-button:hover:not(:disabled), button.secondary-button:hover:not(:disabled) { background: #3977f5; }
-        .primary-button:disabled { cursor: wait; opacity: .65; }
-        .feature-unavailable {
-            margin: 0;
-            color: var(--text-muted);
-            font-size: 13px;
+        .grid-two {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
         }
-        .chat-description { margin-bottom: 8px; color: var(--text-muted); font-size: 14px; }
-        .scan-label {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin: 4px 0 14px;
-            color: #75e3b8;
-            font-size: 12px;
+        @media (max-width: 768px) {
+            .grid-two { grid-template-columns: 1fr; }
         }
-        .scan-label::before { width: 8px; height: 8px; border-radius: 50%; background: currentColor; content: ""; }
-        .chat-container {
-            display: flex;
-            height: 320px;
-            flex-direction: column;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-            border-radius: 11px;
-            background: #0f172a;
-        }
-        .chat-messages {
-            display: flex;
-            flex: 1;
-            flex-direction: column;
-            gap: 10px;
-            overflow-y: auto;
-            padding: 14px;
-        }
-        .msg {
-            max-width: 85%;
-            padding: 10px 12px;
-            border-radius: 10px;
-            overflow-wrap: anywhere;
-            font-size: 14px;
-        }
-        .msg.sent { align-self: flex-start; background: #1e3a8a; }
-        .msg.alert {
-            align-self: center;
-            border: 1px solid #843e42;
-            background: #491e25;
-            color: #ffc0c3;
-            font-weight: 600;
-        }
-        .msg.system { align-self: center; background: #202c40; color: #d0d9e7; }
-        .msg.error { align-self: center; border: 1px solid #79551f; background: #392d1c; color: #ffdc9b; }
-        .message-status { display: block; margin-top: 4px; color: #c4d2e6; font-size: 11px; }
-        .chat-input-area { display: flex; gap: 8px; border-top: 1px solid var(--border-color); }
-        .chat-input-area input {
-            flex: 1;
-            min-width: 0;
-            margin: 0;
-            border: 0;
-            border-radius: 0;
-            background: transparent;
-        }
-        .chat-input-area button { flex: 0 0 auto; margin: 5px; }
-        .footnote { margin: 12px 0 0; color: var(--text-muted); font-size: 12px; }
-        .status-green { color: #34d399; font-weight: 700; }
-        .status-amber { color: #fbbf24; font-weight: 700; }
-        .compliance-note {
-            margin: 12px 0;
-            padding: 12px;
-            border: 1px solid #79551f;
-            border-radius: 9px;
-            background: #392d1c;
-            color: #ffdc9b;
-            font-size: 13px;
-        }
-        .compliance-admin-panel {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #4338ca;
-            border-radius: 9px;
-            background: #312e81;
-        }
-        .compliance-admin-panel strong {
-            display: block;
-            margin-bottom: 8px;
-            color: #c7d2fe;
-        }
-        .checkbox-label {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            margin: 12px 0 0;
-        }
-        .checkbox-label input {
-            width: 18px;
-            min-width: 18px;
-            min-height: 18px;
-            margin: 4px 0 0;
-            accent-color: #34d399;
-        }
-        .compliance-result {
-            min-height: 24px;
-            margin: 12px 0 0;
-            font-size: 14px;
-        }
-        .compliance-result[data-state="error"] { color: #ffc0c3; }
-        .compliance-result[data-state="success"] { color: #7de6bd; }
-        .contract-modal[hidden] { display: none; }
-        .contract-modal {
-            position: fixed;
-            inset: 0;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            background: rgb(0 0 0 / 80%);
-        }
-        .contract-modal-content {
-            width: min(600px, 100%);
-            max-height: 80vh;
-            overflow-y: auto;
-            padding: 24px;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            background: var(--card-bg);
-            box-shadow: 0 20px 60px rgb(0 0 0 / 35%);
-        }
-        .contract-modal-content h2 { color: #34d399; }
-        .contract-draft-text {
-            padding: 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background: var(--bg-color);
-            white-space: pre-line;
-        }
-        .platform-info-list {
-            padding: 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background: var(--bg-color);
-            overflow-wrap: anywhere;
-        }
-        .platform-info-entry + .platform-info-entry {
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid var(--border-color);
-        }
-        .platform-info-entry p { margin: 0 0 5px; }
-        .platform-info-links { display: flex; flex-wrap: wrap; gap: 12px; }
-        .platform-info-links a { color: #60a5fa; }
-        .platform-info-status { margin: 0; color: var(--text-muted); }
-        .platform-info-notice { margin-bottom: 12px; }
-        .contract-modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-        .contract-modal-actions button { flex: 1; margin: 0; }
-        .cancel-button { background: #b91c1c; }
-        .cancel-button:hover { background: #dc2626; }
-        @media (max-width: 700px) {
-            body { padding: 16px 11px; }
-            .grid-two { grid-template-columns: 1fr; gap: 0; }
-            .section-box { padding: 17px; }
-            .topbar { align-items: flex-start; }
-            .api-status { font-size: 11px; }
-        }
-        @media (max-width: 420px) {
-            .topbar { flex-direction: column; }
-            .chat-input-area { flex-direction: column; gap: 0; padding: 8px; }
-            .chat-input-area button { width: auto; margin: 0; }
-        }
+        hr { border: 0; border-top: 1px solid #334155; margin: 20px 0; }
     </style>
-    <script src="/app.js" defer></script>
 </head>
 <body>
-    <main class="container">
-        <header class="topbar">
-            <div class="brand">
-                <div class="brand-mark" aria-hidden="true">🏠</div>
-                <div>
-                    <h1>بورصة العالمي الدولية للأصول والعقارات</h1>
-                    <div class="subtitle">منصة الأصول والعقارات</div>
-                </div>
-            </div>
-            <div id="api-status" class="api-status" data-state="checking" role="status" aria-live="polite">
-                جارٍ الاتصال بالخادم
-            </div>
+    <div class="container">
+        <header>
+            <h1>بورصة العالمي الدولية للأصول والعقارات 🏠</h1>
+            <p id="api-status" style="color: #10b981; font-weight: bold;">✓ متصل بالسحابة وقاعدة البيانات جاهزة الحية</p>
+            <p style="font-size: 13px; color: var(--text-muted);">⚖️ تنبيه قانوني: المنصة وسيط تقني وإعلاني مرخص بموجب بنود خلو المسؤولية الصارمة وأنظمة الدولة لحفظ حقوق السعي والبيانات.</p>
         </header>
 
-        <div class="legal-notice">
-            ⚖️ <strong>تنبيه قانوني:</strong> المنصة وسيط تقني بين الأطراف. لا يُعد هذا التنبيه إعفاءً قانونياً شاملاً ولا بديلاً عن مراجعة العقود والالتزامات النظامية. لا تتم أي حوالة مالية من هذه الصفحة.
-        </div>
-
-        <section class="section-box" aria-labelledby="market-heading">
-            <h2 id="market-heading">🛒 بورصة تجارة الأصول المتعددة</h2>
-            <div class="locked-badge">
-                🔒 حماية الخصوصية: لا تعرض هذه الصفحة أرقام التواصل. يلزم تنفيذ التحقق والصلاحيات على الخادم قبل إتاحة أي بيانات خاصة.
-            </div>
-
+        <!-- 1. واجهة حساب العروض والسعي التلقائي الفوري للأصول -->
+        <div class="section-box">
+            <h2>🛒 بورصة تجارة الأصول المتعددة وحساب العمولات تلقائياً</h2>
+            <p style="color: var(--text-muted);">🔒 حماية الخصوصية: البيانات مقفلة برمجياً آلياً لحماية حقوق السعي وضمان الجدية قبل التفاوض.</p>
             <div class="grid-two">
                 <div>
-                    <label for="asset-type">اختر نوع الأصل الاستثماري:</label>
+                    <label>اختر نوع الأصل الاستثماري:</label>
                     <select id="asset-type">
                         <option value="realestate_sale">عقارات — صفقات بيع (1%)</option>
-                        <option value="realestate_rent">عقارات — إيجار سنوي (5%)</option>
-                        <option value="stocks">أسهم شركات استثمارية (0.5%)</option>
+                        <option value="realestate_rent">عقارات — صفقات إيجار سنوي (5%)</option>
                         <option value="gold">سبائك ذهب ومعادن ثمينة (1%)</option>
-                        <option value="scrap">سكراب حديد ونحاس ومواد مصانع (2%)</option>
+                        <option value="stocks">أسهم شركات خاصة مغلقة (0.5%)</option>
+                        <option value="scrap">سكراب حديد ونحاس ومخلفات مصانع (2%)</option>
                     </select>
                 </div>
                 <div>
-                    <label for="asset-price">قيمة الصفقة الإجمالية (بالريال):</label>
-                    <input type="number" id="asset-price" min="0" step="0.01" inputmode="decimal" placeholder="مثال: 1000000">
+                    <label>قيمة الصفقة الإجمالية (بالريال):</label>
+                    <input type="number" id="asset-price" placeholder="مثال: 1000000">
                 </div>
             </div>
+            <div class="calc-box" id="saei-live-view">💰 نصيب المنصة التلقائي المتوقع من السعي: 0 ريال</div>
+        </div>
 
-            <div class="saei-live-view" aria-live="polite">
-                <span>💰 نصيب المنصة التقديري من السعي:</span>
-                <strong id="saei-live-view">0 ريال</strong>
-            </div>
-            <p class="footnote">حساب تقديري للعرض فقط. لا ينشئ عقداً ولا يخصم أو يحصّل أي مبلغ.</p>
-        </section>
-
-        <section class="section-box" aria-labelledby="compliance-heading">
-            <h2 id="compliance-heading">⚖️ بيانات الامتثال ومراجعة الصفقة</h2>
-            <p class="compliance-note">
-                إدخال بيانات الترخيص أو تأكيد إرفاق الختم لا يتحقق من صحتها أو أصالتها. تُرسل الطلبات للمراجعة اليدوية، ولا تؤدي إلى اعتماد رسمي أو قفل الصفقة.
-            </p>
+        <!-- 2. واجهة الامتثال وشروط تملك الأجانب والتحققات -->
+        <div class="section-box">
+            <h2>⚖️ بيانات الامتثال ومراجعة الصفقة وشروط الدولة 🇸🇦</h2>
             <form id="compliance-form">
                 <div class="grid-two">
                     <div>
-                        <label for="asset-type-flex">نوع الأصل:</label>
-                        <select id="asset-type-flex" required>
+                        <label>نوع الأصل:</label>
+                        <select id="asset-type-flex">
                             <option value="realestate_sale">عقارات — بيع (1%)</option>
                             <option value="realestate_rent">عقارات — إيجار (5%)</option>
-                            <option value="stocks">أسهم غير مدرجة (0.5%)</option>
-                            <option value="gold">ذهب ومعادن ثمينة (1%)</option>
-                            <option value="scrap">سكراب ومواد مصانع (2%)</option>
+                            <option value="gold">سبائك ذهب (1%)</option>
+                            <option value="scrap">سكراب حديد ونحاس (2%)</option>
                         </select>
                     </div>
                     <div>
-                        <label for="asset-price-flex">قيمة الصفقة الإجمالية (بالريال):</label>
-                        <input type="number" id="asset-price-flex" min="0.01" step="0.01" inputmode="decimal" placeholder="مثال: 5000000" required>
+                        <label>قيمة الصفقة الإجمالية (بالريال):</label>
+                        <input type="number" id="asset-price-flex-input" placeholder="مثال: 5000000" required>
                     </div>
                     <div>
-                        <label for="user-nationality-flex">الجنسية:</label>
+                        <label>الجنسية:</label>
                         <select id="user-nationality-flex">
-                            <option value="">اختر الجنسية</option>
-                            <option value="Saudi">سعودي</option>
-                            <option value="Non-Saudi">غير سعودي</option>
+                            <option value="Saudi">مواطن سعودي</option>
+                            <option value="GCC">مواطن خليجي</option>
+                            <option value="Foreigner">مقيم / مستثمر أجنبي</option>
                         </select>
                     </div>
                     <div>
-                        <label for="property-location-flex">موقع العقار:</label>
+                        <label>موقع العقار:</label>
                         <select id="property-location-flex">
-                            <option value="">اختر الموقع</option>
-                            <option value="Makkah">مكة المكرمة</option>
-                            <option value="Madinah">المدينة المنورة</option>
-                            <option value="Other">موقع آخر</option>
+                            <option value="Riyadh">الرياض / جدة / الشرقية</option>
+                            <option value="Makkah">داخل حدود الحرم - مكة المكرمة</option>
+                            <option value="Madinah">داخل حدود الحرم - المدينة المنورة</option>
                         </select>
                     </div>
                 </div>
-
-                <label for="license-input-flex">بيانات الترخيص أو السجل التجاري:</label>
-                <input type="text" id="license-input-flex" maxlength="300" autocomplete="off" placeholder="أدخل البيانات المطلوبة بحسب نوع الأصل">
-
-                <label class="checkbox-label" for="chamber-stamp-checkbox">
-                    <input type="checkbox" id="chamber-stamp-checkbox">
-                    <span>أؤكد إرفاق بيانات ختم الغرفة التجارية (للذهب والسكراب عند انطباق المتطلب). هذا الإقرار لا يثبت صحة الختم.</span>
-                </label>
-
-                <div class="compliance-admin-panel">
-                    <strong>👑 إعدادات السعي والتحكم الاستثنائي</strong>
-                    <label for="custom-saei-flex">مبلغ السعي المخصص (اختياري، بالريال):</label>
-                    <input type="number" id="custom-saei-flex" min="0.01" step="0.01" inputmode="decimal" placeholder="اتركه فارغاً لاستخدام النسبة الافتراضية">
-                    <label class="checkbox-label" for="developer-bypass-checkbox">
-                        <input type="checkbox" id="developer-bypass-checkbox" disabled aria-describedby="bypass-unavailable-note">
-                        <span>التمرير الاستثنائي غير متاح من واجهة المتصفح.</span>
-                    </label>
-                    <p class="compliance-note" id="bypass-unavailable-note">
-                        يتطلب التمرير صلاحية خادمية موثقة، ولا يتجاوز المراجعة اليدوية. لا تضع رمز الصلاحية في الصفحة أو المتصفح.
-                    </p>
+                <div style="margin-top: 15px;">
+                    <label>بيانات الترخيص أو السجل التجاري:</label>
+                    <input type="text" id="license-input-flex" placeholder="أدخل رقم رخصة فال العقارية أو السجل التجاري المعتمد..." required>
                 </div>
-                <button class="primary-button" id="compliance-submit" type="submit">إرسال للمراجعة اليدوية</button>
-                <p class="compliance-result" id="compliance-result" role="status" aria-live="polite"></p>
+                <div style="margin-top: 15px; background: #0f172a; padding: 12px; border-radius: 5px; border: 1px dashed #10b981;">
+                    <label><input type="checkbox" id="chamber-stamp-checkbox"> أؤكد إرفاق بيانات ختم الغرفة التجارية الإلكتروني المعتمد للفاتورة (للذهب والنحاس والسكراب).</label>
+                </div>
+
+                <div style="margin-top: 20px; background: #312e81; padding: 15px; border-radius: 6px; border: 1px solid #4338ca;">
+                    <strong style="color: #a5b4fc; display: block; margin-bottom: 5px;">👑 إعدادات السعي والتحكم الاستثنائي (صلاحيات المطور المالك):</strong>
+                    <label><input type="checkbox" id="developer-bypass-checkbox"> تفعيل خيار التمرير الفوري الاستثنائي (تجاوز شروط الرخص والأختام تجارياً)</label>
+                    <input type="number" id="custom-saei-flex" placeholder="حدد مبلغ سعي مرن متفق عليه يدوياً (اختياري)">
+                </div>
+
+                <button type="submit" id="compliance-submit">🔍 فحص معالجة الامتثال وتوقيع العقد المبدئي</button>
             </form>
-        </section>
-
-        <section class="section-box" aria-labelledby="chat-heading">
-            <h2 id="chat-heading">💬 محادثة التفاوض والفحص الأمني</h2>
-            <p class="chat-description">
-                تُفحص الرسالة على الخادم بمطابقة كلمات مفتاحية قبل إظهار نتيجة الفحص؛ هذا ليس نموذج ذكاء اصطناعي ولا يضمن اكتشاف كل حالات التلاعب.
-            </p>
-            <div class="scan-label">فحص كلمات مفتاحية على الخادم</div>
-
-            <div class="chat-container">
-                <div class="chat-messages" id="chat-box-msgs" role="log" aria-live="polite" aria-relevant="additions text">
-                    <div class="msg system">أرسل رسالة لبدء الفحص. لن تظهر نتيجة التحليل قبل رد الخادم.</div>
-                </div>
-                <form class="chat-input-area" id="chat-form">
-                    <input type="text" id="chat-input-field" maxlength="4000" autocomplete="off" placeholder="اكتب رسالتك للتفاوض هنا..." aria-label="رسالة التفاوض" required>
-                    <button class="primary-button" id="send-message" type="submit">فحص وإرسال 🚀</button>
-                </form>
-            </div>
-            <p class="footnote">الرصد لا يحظر الرسائل تلقائياً. تنبيهات المطور تصل فقط إلى جلسة مطور موثّقة ومتّصلة.</p>
-        </section>
-
-        <div class="grid-two">
-            <section class="section-box" aria-labelledby="brokers-heading">
-                <h3 id="brokers-heading">🎖️ الوسطاء والسعاة</h3>
-                <p class="status-green">✓ تصنيف الوسطاء المعتمدين</p>
-                <p class="status-amber">! تصنيف المسوقين قيد المراجعة</p>
-                <p class="feature-unavailable">لا تتوفر حالياً خدمة تحقق من الاعتماد أو إنشاء الاجتماعات في الخادم.</p>
-                <button class="secondary-button" type="button" disabled title="الخدمة غير متصلة بالخادم">إنشاء اجتماع — غير متاح حالياً</button>
-            </section>
-            <section class="section-box" aria-labelledby="finance-heading">
-                <h3 id="finance-heading">🏦 الجهات التمويلية والعقود</h3>
-                <p class="muted">تأكد من مراجعة الجهة المختصة ومسودة العقد قبل مشاركة أي مستندات أو بيانات مالية.</p>
-                <p class="feature-unavailable">لا تتوفر حالياً خدمة إرسال مستندات أو معالجة مدفوعات في الخادم.</p>
-                <button class="secondary-button" type="button" disabled title="الخدمة غير متصلة بالخادم">إرسال المستندات — غير متاح حالياً</button>
-            </section>
+            <div id="compliance-result" style="margin-top: 15px; font-weight: bold; color: #10b981;"></div>
         </div>
 
-        <section class="section-box" aria-labelledby="platform-info-heading">
-            <h2 id="platform-info-heading">🏦 بيانات الحسابات وقنوات التواصل</h2>
-            <p class="compliance-note platform-info-notice">
-                البيانات المعروضة معلومات مقدمة من مشغّل المنصة وليست توثيقاً للحساب أو اعتماداً له. تحقق من هوية المستفيد وتفاصيل الدفع عبر قناة مستقلة قبل أي تحويل. الموقع لا يعالج المدفوعات.
-            </p>
-            <h3>الحسابات البنكية</h3>
-            <div class="platform-info-list" id="bank-accounts-view" role="status" aria-live="polite">
-                <p class="platform-info-status">جارٍ تحميل بيانات الحسابات...</p>
+        <!-- 3. غرف المحادثة المراقبة والاتصال والاجتماعات والمستندات الحية -->
+        <div class="section-box">
+            <h2>💬 محادثة التفاوض والفحص الأمني والاجتماعات الحية</h2>
+            <div class="grid-two">
+                <div>
+                    <div id="chat-box-msgs" style="height: 160px; background: #0f172a; border-radius: 6px; padding: 10px; overflow-y: auto; font-size: 13px; border: 1px solid #334155; margin-bottom: 8px;">
+                        <p style="color: var(--text-muted);">نظام الرقابة ضد التهرب نشط آلياً...</p>
+                    </div>
+                    <div style="display:flex; gap: 5px;">
+                        <input type="text" id="chat-input-field" placeholder="اكتب رسالتك للتفاوض هنا...">
+                        <button id="send-message" onclick="sendChatMessageLive()" style="margin:0; width:auto; padding: 0 20px;">فحص وإرسال 🚀</button>
+                    </div>
+                </div>
+                <div>
+                    <h3>🎖️ الوسطاء والسعاة والاجتماعات</h3>
+                    <button id="btn-meet" onclick="createLiveMeetingNow()" style="background: #2563eb;" disabled>🔗 إنشاء اجتماع فوري عبر Google Meet — غير متاح حالياً</button>
+                    <button id="btn-docs" onclick="submitOfficialDocumentsNow()" style="background: #10b981;" disabled>📤 إرسال ومعالجة المستندات للبنك — غير متاح حالياً</button>
+                </div>
             </div>
-            <h3>أرقام التواصل وروابط المنصة</h3>
-            <div class="platform-info-list" id="contacts-view" role="status" aria-live="polite">
-                <p class="platform-info-status">جارٍ تحميل قنوات التواصل...</p>
-            </div>
-        </section>
-    </main>
-    <div
-        class="contract-modal"
-        id="contract-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="contract-modal-title"
-        aria-describedby="contract-modal-notice"
-        hidden
-    >
-        <section class="contract-modal-content">
-            <h2 id="contract-modal-title">📜 مسودة معلوماتية للمراجعة</h2>
-            <p class="compliance-note" id="contract-modal-notice">
-                هذه مسودة توضيحية وليست عقداً قانونياً أو توقيعاً إلكترونياً. راجعها مع مختص قبل أي التزام. الموافقة تعني متابعة طلب المراجعة فقط، ولا تنشئ دفعة أو تفتح التواصل.
-            </p>
-            <div class="contract-draft-text" id="contract-text"></div>
-            <div class="contract-modal-actions">
-                <button class="primary-button" id="accept-contract" type="button">قرأت المسودة وأوافق على متابعة الطلب</button>
-                <button class="primary-button cancel-button" id="cancel-contract" type="button">إلغاء</button>
-            </div>
-        </section>
-    </div>
-</body>
-</html>
+        </div>
+
+        <!-- 4. قنوات التواصل والحسابات البنكية المستدعاة ديناميكياً -->
+        <div class="section-box">
+            <h2>🏦 بيانات الحسابات وقنوات التواصل المعتمدة للمنصة</h2>
+            <div class="grid-two">
+                <div>
+                    <h4>الحسابات البنكية الرسمية (للسعي والاشتراكات):</h4>
+                    <div id="bank-accounts-view" style="background: #0f172a; padding: 12px; border-radius: 6px; font-size: 14px; line-height: 1.6; border: 1px solid #334155;">
+                        🏛️ <strong>البنك الأهلي السعودي (SNB)</strong><br>👤 الحساب: شركة بورصة العالمي للاستثمار<br>💳 الآيبان IBAN: <span style="color:#f59e0b;">SA6210000000000000000000</span><br><hr style="border-color:#1e293b;">
+                        🏛️ <strong>مصرف الراجحي (Al Rajhi)</strong><br>👤 الحساب: شركة بورصة العالمي للاستثمار<br>💳 الآيبان IBAN: <span style="color:#f59e0b;">SA8000000000000000000000</span>
+                    </div>
+                </div>

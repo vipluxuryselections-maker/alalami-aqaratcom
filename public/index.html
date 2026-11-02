@@ -2,22 +2,25 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>بورصة العالمي الدولية للأصول والعقارات</title>
     <style>
         :root {
-            --primary: #1e3a8a;
+            --primary: #2563eb;
             --bg: #0f172a;
             --card: #1e293b;
-            --text: #f8fafc;
-            --text-muted: #94a3b8;
+            --text: #ffffff; /* أبيض ناصع لأعلى وضوح للكتابة */
+            --text-muted: #cbd5e1; /* تفتيح النص الفرعي ليصبح واضحاً جداً */
+            --border-color: #475569;
         }
         body {
             font-family: 'Segoe UI', Tahoma, sans-serif;
             background: var(--bg);
             color: var(--text);
             margin: 0;
-            padding: 20px;
+            padding: 12px;
+            font-size: 16px; /* تكبير حجم الخط الافتراضي */
+            line-height: 1.6;
         }
         .container {
             max-width: 1200px;
@@ -25,76 +28,164 @@
         }
         header {
             background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
-            color: white;
-            padding: 25px;
+            color: #ffffff;
+            padding: 25px 15px;
             text-align: center;
             border-radius: 8px;
             margin-bottom: 20px;
-            border: 1px solid #1e40af;
+            border: 2px solid #2563eb; /* زيادة وضوح الحدود */
+        }
+        header h1 {
+            font-size: 24px; /* حجم خط ممتاز للجوال */
+            margin: 0 0 10px 0;
+        }
+        header p {
+            font-size: 15px;
+            margin: 5px 0;
         }
         .calc-box {
             background: #1e3a8a;
-            padding: 15px;
+            padding: 18px;
             border-radius: 6px;
             margin-top: 15px;
             font-weight: bold;
             color: #38bdf8;
             border: 1px solid #0284c7;
+            font-size: 17px; /* تكبير خط الحساب الفوري */
         }
         input, select, button {
-            padding: 12px;
-            margin-top: 8px;
-            border-radius: 5px;
-            border: 1px solid #475569;
+            padding: 14px; /* زيادة مساحة النقر المريحة للإصبع */
+            margin-top: 10px;
+            border-radius: 6px;
+            border: 2px solid var(--border-color); /* زيادة وضوح الحدود للإنبوت */
             background: #0f172a;
-            color: var(--text);
+            color: #ffffff;
             width: 100%;
             box-sizing: border-box;
-            font-size: 14px;
+            font-size: 16px; /* خط كبير واضح داخل الخانات من الجوال */
+            font-weight: 500;
+        }
+        input::placeholder {
+            color: #94a3b8; /* وضوح نصوص المساعد التعبيري */
+        }
+        label {
+            display: block;
+            margin-top: 12px;
+            font-weight: bold;
+            color: #f1f5f9;
+            font-size: 15px;
         }
         button {
             background: #10b981;
-            color: white;
+            color: #ffffff;
             border: none;
             font-weight: bold;
+            font-size: 17px;
             cursor: pointer;
-            margin-top: 15px;
+            margin-top: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2); /* تأثير لتمييز الأزرار */
         }
         button:disabled {
             background: #475569 !important;
             cursor: not-allowed;
-            opacity: 0.6;
+            opacity: 0.7;
+            color: #94a3b8;
         }
         .section-box {
             background: var(--card);
-            padding: 25px;
+            padding: 22px 16px;
             border-radius: 8px;
-            border: 1px solid #334155;
-            margin-bottom: 20px;
+            border: 2px solid #334155; /* تفتيح وتوضيح الصناديق */
+            margin-bottom: 25px;
+        }
+        h2 {
+            font-size: 20px;
+            color: #34d399; /* لون أخضر جذاب وواضح للعناوين */
+            margin-top: 0;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 8px;
+        }
+        h3 {
+            font-size: 18px;
+            color: #38bdf8;
+            margin-top: 15px;
         }
         .grid-two {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 15px;
         }
         @media (max-width: 768px) {
-            .grid-two { grid-template-columns: 1fr; }
+            .grid-two { grid-template-columns: 1fr; } /* التوافق التام مع الجوال */
+            body { padding: 8px; }
+            .section-box { padding: 15px 12px; }
         }
-        hr { border: 0; border-top: 1px solid #334155; margin: 20px 0; }
+        hr { border: 0; border-top: 2px solid #334155; margin: 25px 0; }
+        a { color: #38bdf8; font-weight: bold; text-decoration: underline; }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>بورصة العالمي الدولية للأصول والعقارات 🏠</h1>
-            <p id="api-status" style="color: #10b981; font-weight: bold;">✓ متصل بالسحابة وقاعدة البيانات جاهزة الحية</p>
-            <p style="font-size: 13px; color: var(--text-muted);">⚖️ تنبيه قانوني: المنصة وسيط تقني وإعلاني مرخص بموجب بنود خلو المسؤولية الصارمة وأنظمة الدولة لحفظ حقوق السعي والبيانات.</p>
+            <p id="api-status" style="color: #10b981; font-weight: bold; font-size: 17px;">✓ متصل بالسحابة وقاعدة البيانات جاهزة الحية</p>
+            <p style="font-size: 14px; color: var(--text-muted);">⚖️ تنبيه قانوني: المنصة وسيط تقني وإعلاني مرخص بموجب بنود خلو المسؤولية الصارمة وأنظمة الدولة لحفظ حقوق السعي والبيانات.</p>
         </header>
 
-        <!-- 1. واجهة حساب العروض والسعي التلقائي الفوري للأصول -->
+        <!-- بوابة إدراج عقار جديد -->
+        <div class="section-box">
+            <h2>🏠 بوابة إدراج عقار جديد (للملاك، الأفراد، والمطورين)</h2>
+            <p style="color: var(--text-muted); font-size: 14px;">اطرح عقارك الآن للبيع، التأجير، الرهن، أو التطوير المباشر بالبورصة العقارية.</p>
+            
+            <form id="property-upload-form" onsubmit="event.preventDefault(); uploadPropertyLive();">
+                <div class="grid-two">
+                    <div>
+                        <label>صفة المعلن:</label>
+                        <select id="prop-owner-type">
+                            <option value="مالك منفرد">مالك (صاحب أصل)</option>
+                            <option value="مواطن فرد">فرد (مسوق/ساعي)</option>
+                            <option value="مطور عقاري">مطور عقاري معتمد</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>تصنيف العقار العقاري:</label>
+                        <select id="prop-category">
+                            <option value="فيلا سكنية">فيلا سكنية</option>
+                            <option value="شقة فاخرة">شقة فاخرة</option>
+                            <option value="برج تجاري">برج / مجمع تجاري</option>
+                            <option value="أرض استثمارية">أرض استثمارية / مخطط</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>عنوان وعنوان وصف العقار البورصي:</label>
+                        <input type="text" id="prop-title" placeholder="مثال: فيلا مودرن للبيع بحي النرجس" required>
+                    </div>
+                    <div>
+                        <label>السعر المستهدف المكتوب (بالريال):</label>
+                        <input type="number" id="prop-final-price" placeholder="مثال: 3500000" required>
+                    </div>
+                    <div>
+                        <label>المدينة / المنطقة الجغرافية الصالحة:</label>
+                        <select id="prop-geo-location">
+                            <option value="Riyadh">الرياض</option>
+                            <option value="Jeddah">جدة</option>
+                            <option value="Makkah">مكة المكرمة (خاضع لشرط الحظر)</option>
+                            <option value="Khobar">الخبر / الشرقية</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>رقم رخصة فال العقارية (إلزامي نظامياً):</label>
+                        <input type="text" id="prop-val-license" placeholder="أدخل رقم رخصة فال المعتمد..." required>
+                    </div>
+                </div>
+                <button type="submit" style="background: #2563eb;">🚀 بث ونشر العقار فوراً بالسحابة</button>
+            </form>
+        </div>
+
+        <!-- واجهة حساب العروض والسعي التلقائي -->
         <div class="section-box">
             <h2>🛒 بورصة تجارة الأصول المتعددة وحساب العمولات تلقائياً</h2>
-            <p style="color: var(--text-muted);">🔒 حماية الخصوصية: البيانات مقفلة برمجياً آلياً لحماية حقوق السعي وضمان الجدية قبل التفاوض.</p>
+            <p style="color: var(--text-muted); font-size: 14px;">🔒 حماية الخصوصية: البيانات مقفلة برمجياً آلياً لحماية حقوق السعي وضمان الجدية قبل التفاوض.</p>
             <div class="grid-two">
                 <div>
                     <label>اختر نوع الأصل الاستثماري:</label>
@@ -114,7 +205,7 @@
             <div class="calc-box" id="saei-live-view">💰 نصيب المنصة التلقائي المتوقع من السعي: 0 ريال</div>
         </div>
 
-        <!-- 2. واجهة الامتثال وشروط تملك الأجانب والتحققات -->
+        <!-- واجهة الامتثال وشروط تملك الأجانب والتحققات -->
         <div class="section-box">
             <h2>⚖️ بيانات الامتثال ومراجعة الصفقة وشروط الدولة 🇸🇦</h2>
             <form id="compliance-form">
@@ -137,66 +228,3 @@
                         <select id="user-nationality-flex">
                             <option value="Saudi">مواطن سعودي</option>
                             <option value="GCC">مواطن خليجي</option>
-                            <option value="Foreigner">مقيم / مستثمر أجنبي</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>موقع العقار:</label>
-                        <select id="property-location-flex">
-                            <option value="Riyadh">الرياض / جدة / الشرقية</option>
-                            <option value="Makkah">داخل حدود الحرم - مكة المكرمة</option>
-                            <option value="Madinah">داخل حدود الحرم - المدينة المنورة</option>
-                        </select>
-                    </div>
-                </div>
-                <div style="margin-top: 15px;">
-                    <label>بيانات الترخيص أو السجل التجاري:</label>
-                    <input type="text" id="license-input-flex" placeholder="أدخل رقم رخصة فال العقارية أو السجل التجاري المعتمد..." required>
-                </div>
-                <div style="margin-top: 15px; background: #0f172a; padding: 12px; border-radius: 5px; border: 1px dashed #10b981;">
-                    <label><input type="checkbox" id="chamber-stamp-checkbox"> أؤكد إرفاق بيانات ختم الغرفة التجارية الإلكتروني المعتمد للفاتورة (للذهب والنحاس والسكراب).</label>
-                </div>
-
-                <div style="margin-top: 20px; background: #312e81; padding: 15px; border-radius: 6px; border: 1px solid #4338ca;">
-                    <strong style="color: #a5b4fc; display: block; margin-bottom: 5px;">👑 إعدادات السعي والتحكم الاستثنائي (صلاحيات المطور المالك):</strong>
-                    <label><input type="checkbox" id="developer-bypass-checkbox"> تفعيل خيار التمرير الفوري الاستثنائي (تجاوز شروط الرخص والأختام تجارياً)</label>
-                    <input type="number" id="custom-saei-flex" placeholder="حدد مبلغ سعي مرن متفق عليه يدوياً (اختياري)">
-                </div>
-
-                <button type="submit" id="compliance-submit">🔍 فحص معالجة الامتثال وتوقيع العقد المبدئي</button>
-            </form>
-            <div id="compliance-result" style="margin-top: 15px; font-weight: bold; color: #10b981;"></div>
-        </div>
-
-        <!-- 3. غرف المحادثة المراقبة والاتصال والاجتماعات والمستندات الحية -->
-        <div class="section-box">
-            <h2>💬 محادثة التفاوض والفحص الأمني والاجتماعات الحية</h2>
-            <div class="grid-two">
-                <div>
-                    <div id="chat-box-msgs" style="height: 160px; background: #0f172a; border-radius: 6px; padding: 10px; overflow-y: auto; font-size: 13px; border: 1px solid #334155; margin-bottom: 8px;">
-                        <p style="color: var(--text-muted);">نظام الرقابة ضد التهرب نشط آلياً...</p>
-                    </div>
-                    <div style="display:flex; gap: 5px;">
-                        <input type="text" id="chat-input-field" placeholder="اكتب رسالتك للتفاوض هنا...">
-                        <button id="send-message" onclick="sendChatMessageLive()" style="margin:0; width:auto; padding: 0 20px;">فحص وإرسال 🚀</button>
-                    </div>
-                </div>
-                <div>
-                    <h3>🎖️ الوسطاء والسعاة والاجتماعات</h3>
-                    <button id="btn-meet" onclick="createLiveMeetingNow()" style="background: #2563eb;" disabled>🔗 إنشاء اجتماع فوري عبر Google Meet — غير متاح حالياً</button>
-                    <button id="btn-docs" onclick="submitOfficialDocumentsNow()" style="background: #10b981;" disabled>📤 إرسال ومعالجة المستندات للبنك — غير متاح حالياً</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 4. قنوات التواصل والحسابات البنكية المستدعاة ديناميكياً -->
-        <div class="section-box">
-            <h2>🏦 بيانات الحسابات وقنوات التواصل المعتمدة للمنصة</h2>
-            <div class="grid-two">
-                <div>
-                    <h4>الحسابات البنكية الرسمية (للسعي والاشتراكات):</h4>
-                    <div id="bank-accounts-view" style="background: #0f172a; padding: 12px; border-radius: 6px; font-size: 14px; line-height: 1.6; border: 1px solid #334155;">
-                        🏛️ <strong>البنك الأهلي السعودي (SNB)</strong><br>👤 الحساب: شركة بورصة العالمي للاستثمار<br>💳 الآيبان IBAN: <span style="color:#f59e0b;">SA6210000000000000000000</span><br><hr style="border-color:#1e293b;">
-                        🏛️ <strong>مصرف الراجحي (Al Rajhi)</strong><br>👤 الحساب: شركة بورصة العالمي للاستثمار<br>💳 الآيبان IBAN: <span style="color:#f59e0b;">SA8000000000000000000000</span>
-                    </div>
-                </div>

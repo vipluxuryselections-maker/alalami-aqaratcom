@@ -1,7 +1,9 @@
 'use strict';
 
+// 🔌 ربط المعرفات المحدثة لملف الـ HTML الجديد عالي الوضوح
 const assetType = document.getElementById('asset-type');
 const assetPrice = document.getElementById('asset-price');
+const propFinalPrice = document.getElementById('prop-final-price'); // المعرف الجديد لبوابة الملاك والعقارات
 const estimate = document.getElementById('saei-live-view');
 const complianceForm = document.getElementById('compliance-form');
 const complianceSubmit = document.getElementById('compliance-submit');
@@ -16,8 +18,8 @@ let pendingCompliancePayload = null;
 let activeContractAsset = null;
 
 const rates = {
-  realestate_sale: 0.01,
-  realestate_rent: 0.05,
+  realestate_sale: 0.01,   // 1% لصفقات البيع التنافسية لشركة العالمي
+  realestate_rent: 0.05,   // 5% للإيجار السنوي
   stocks: 0.005,
   gold: 0.01,
   scrap: 0.02,
@@ -61,33 +63,45 @@ function openContractModal(asset) {
   if (contractModal) contractModal.style.display = "flex";
 }
 
-// تعديل الدالة ل فك قفل الخيارات التفاعلية بالموقع فوراً
 function closeContractModal(discardRequest = true) {
   if (contractModal) contractModal.style.display = "none";
   if (discardRequest) pendingCompliancePayload = null;
   activeContractAsset = null;
   
-  // تفعيل بوابات الوسطاء والاجتماعات والتمويل بالموقع عند قبول المسودة
-  const elementsToEnable = ['compliance-submit', 'btn-meet', 'btn-docs', 'btn-send-doc'];
-  elementsToEnable.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-          el.disabled = false;
-          el.innerText = el.innerText.replace('— غير متاح حالياً', '').replace('— متاح للمعاينة فقط', '');
-      }
-  });
+  // تفعيل بوابات الاجتماعات والمستندات فوراً بعد توقيع وقبول مسودة الامتثال
+  const meetButton = document.getElementById('btn-meet');
+  if (meetButton) {
+    meetButton.disabled = false;
+    meetButton.innerText = "🔗 إنشاء اجتماع فوري عبر Google Meet";
+  }
+
+  const docsButton = document.getElementById('btn-docs');
+  if (docsButton) {
+    docsButton.disabled = false;
+    docsButton.innerText = "📤 إرسال ومعالجة المستندات للبنك";
+  }
 }
 
+// دالة الحساب الفوري الذكية المحدثة لتقرأ من كلا الحقلين ديناميكياً وتدعم مبالغ المليار
 function calculateLiveSaei() {
-  const price = parseFloat(assetPrice.value) || 0;
-  const asset = assetType.value;
+  const priceFromExchange = parseFloat(assetPrice ? assetPrice.value : 0) || 0;
+  const priceFromOwner = parseFloat(propFinalPrice ? propFinalPrice.value : 0) || 0;
+  
+  // اختيار القيمة النشطة المكتوبة حالياً بالشاشة
+  const activePrice = priceFromExchange > 0 ? priceFromExchange : priceFromOwner;
+  
+  const asset = assetType ? assetType.value : 'realestate_sale';
   const rate = rates[asset] || 0.01;
-  if (estimate) estimate.innerText = `💰 نصيب المنصة التلقائي المتوقع من السعي: ${(price * rate).toLocaleString()} ريال`;
+  
+  if (estimate) {
+    const calculatedAmount = activePrice * rate;
+    estimate.innerText = `💰 نصيب المنصة التلقائي المتوقع من السعي: ${calculatedAmount.toLocaleString('ar-SA')} ريال قطعي`;
+  }
 }
 
 async function sendComplianceRequest(payload) {
   if (complianceSubmit) complianceSubmit.disabled = true;
-  if (complianceResult) complianceResult.textContent = 'جاري معالجة الصفقة وربط التراخيص وأختام الغرفة التجارية بالسحابة...';
+  if (complianceResult) complianceResult.textContent = 'جاري معالجة الصفقة وتوثيقها بقاعدة البيانات السحابية الحية...';
   
   try {
     const response = await fetch('/api/compliance/validate-deal-flexible', {
@@ -113,7 +127,7 @@ async function sendComplianceRequest(payload) {
 function submitComplianceRequest(event) {
   event.preventDefault();
   const asset = complianceAssetType.value;
-  const price = document.getElementById('asset-price-flex').value;
+  const price = document.getElementById('asset-price-flex-input').value;
   const license = document.getElementById('license-input-flex').value.trim();
   const chamberStamp = document.getElementById('chamber-stamp-checkbox').checked;
   const bypass = document.getElementById('developer-bypass-checkbox').checked;
@@ -122,7 +136,8 @@ function submitComplianceRequest(event) {
   pendingCompliancePayload = {
     assetType: asset,
     price: price,
-    userNationality: "Saudi",
+    userNationality: document.getElementById('user-nationality-flex').value,
+    propertyLocation: document.getElementById('property-location-flex').value,
     licenseNumber: license,
     chamberOfCommerceStampAttached: chamberStamp,
     isSuperDeveloperBypass: bypass,
@@ -139,18 +154,16 @@ function acceptContract() {
   closeContractModal(false);
 }
 
-// 🚀 محرك الاتصال التلقائي وتلوين الشارة بالأخضر عند تحميل الصفحة فوراً
 document.addEventListener('DOMContentLoaded', () => {
-  const apiStatus = document.getElementById('api-status');
-  if (apiStatus) {
-    apiStatus.textContent = "✓ متصل بالسحابة وقاعدة البيانات جاهزة الحية";
-    apiStatus.style.color = "#10b981"; // تلوين الخط للأخضر
-    apiStatus.style.fontWeight = "bold";
-  }
-
+  // تفعيل الاستماع اللحظي لتغير قيم الأسعار لتحديث السعي فوراً بالأرقام المليارية
   if (assetPrice) assetPrice.addEventListener('input', calculateLiveSaei);
+  if (propFinalPrice) propFinalPrice.addEventListener('input', calculateLiveSaei);
   if (assetType) assetType.addEventListener('change', calculateLiveSaei);
+  
   if (complianceForm) complianceForm.addEventListener('submit', submitComplianceRequest);
   if (acceptContractButton) acceptContractButton.addEventListener('click', acceptContract);
   if (cancelContractButton) cancelContractButton.addEventListener('click', () => closeContractModal(true));
+  
+  // تشغيل مبدئي للحساب
+  calculateLiveSaei();
 });

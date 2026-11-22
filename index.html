@@ -1,108 +1,164 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>بورصة العالمي الدولية للأصول والعقارات</title>
     <style>
         :root {
-            --primary: #1e3a8a;
+            --primary: #2563eb;
             --bg: #0f172a;
             --card: #1e293b;
-            --text: #f8fafc;
-            --text-muted: #94a3b8;
+            --text: #ffffff;
+            --text-muted: #cbd5e1;
+            --border-color: #475569;
+            --input-bg: #0f172a;
         }
-
+        body.light-mode {
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #0f172a;
+            --text-muted: #475569;
+            --border-color: #cbd5e1;
+            --input-bg: #f8fafc;
+        }
         body {
             font-family: 'Segoe UI', Tahoma, sans-serif;
             background: var(--bg);
             color: var(--text);
             margin: 0;
-            padding: 20px;
+            padding: 12px;
+            font-size: 16px;
+            line-height: 1.6;
+            transition: background 0.3s, color 0.3s;
         }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
+        .container { max-width: 1200px; margin: 0 auto; padding-bottom: 90px; }
         header {
             background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
-            color: white;
-            padding: 25px;
+            color: #ffffff;
+            padding: 20px;
             text-align: center;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #1e40af;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 2px solid #2563eb;
+            position: relative;
         }
-
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
+        .theme-toggle {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            width: auto;
+            padding: 8px 14px;
+            margin: 0;
+            background: rgba(255,255,255,0.15);
+            font-size: 14px;
         }
-
-        .tab-btn {
-            background: #334155;
-            color: var(--text);
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 15px;
-            transition: all 0.3s ease;
-        }
-
-        .tab-btn.active {
-            background: #10b981;
-            color: white;
-        }
-
-        .tab-content {
-            display: none;
+        .showcase-wrapper {
             background: var(--card);
-            padding: 25px;
+            border: 2px solid #10b981;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .showcase-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .showcase-track {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            padding-bottom: 8px;
+        }
+        .showcase-card {
+            min-width: 290px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border: 1px solid #334155;
+            padding: 15px;
+            flex-shrink: 0;
+        }
+        .badge {
+            display: inline-block;
+            background: #2563eb;
+            color: #fff;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge-closed { background: #16a34a; }
+        .badge-open { background: #d97706; }
+        .section-box {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
             margin-bottom: 20px;
         }
-
-        .tab-content.active {
-            display: block;
+        h2 {
+            font-size: 20px;
+            color: #10b981;
+            margin-top: 0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
         }
-
-        input, select, button {
+        input, select, button, textarea {
             padding: 12px;
             margin-top: 8px;
-            border-radius: 5px;
-            border: 1px solid #475569;
-            background: #0f172a;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: var(--input-bg);
             color: var(--text);
             width: 100%;
             box-sizing: border-box;
-            font-size: 14px;
+            font-size: 15px;
+            font-family: inherit;
         }
-
+        label { display: block; margin-top: 12px; font-weight: bold; font-size: 14px; }
         button {
             background: #10b981;
-            color: white;
+            color: #ffffff;
             border: none;
             font-weight: bold;
+            font-size: 16px;
             cursor: pointer;
             margin-top: 15px;
-            transition: background 0.3s ease;
         }
-
-        button:disabled {
-            background: #475569 !important;
-            cursor: not-allowed;
-            opacity: 0.6;
+        button:disabled { background: #64748b !important; cursor: not-allowed; opacity: 0.7; }
+        .grid-two { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .grid-three { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 15px; }
+        .prop-card {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
-
+        .action-row { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+        .action-row a, .action-row button {
+            flex: 1;
+            text-align: center;
+            padding: 9px 6px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+            text-decoration: none;
+            color: #fff;
+            margin: 0;
+            min-width: 80px;
+        }
+        .btn-wa { background: #16a34a; }
+        .btn-call { background: #2563eb; }
+        .btn-fav { background: #475569; }
         .calc-box {
             background: #1e3a8a;
             padding: 15px;
@@ -110,128 +166,107 @@
             margin-top: 15px;
             font-weight: bold;
             color: #38bdf8;
-            border: 1px solid #0284c7;
         }
-
-        .section-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+        .live-stage {
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            min-height: 240px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #ef4444;
         }
-
+        .live-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #ef4444;
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .ai-fab {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: auto;
+            background: linear-gradient(135deg, #2563eb, #10b981);
+            color: #fff;
+            padding: 14px 20px;
+            border-radius: 50px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+            z-index: 999;
+            margin: 0;
+        }
+        .ai-drawer {
+            display: none;
+            position: fixed;
+            bottom: 80px;
+            left: 20px;
+            width: 340px;
+            max-width: 90vw;
+            background: var(--card);
+            border: 2px solid #2563eb;
+            border-radius: 12px;
+            padding: 15px;
+            z-index: 1000;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        video { max-width: 100%; border-radius: 8px; background: #000; }
         @media (max-width: 768px) {
-            .section-grid { grid-template-columns: 1fr; }
+            .grid-two { grid-template-columns: 1fr; }
+            .theme-toggle { position: static; margin-bottom: 10px; width: 100%; }
         }
-
-        hr { border: 0; border-top: 1px solid #334155; margin: 20px 0; }
     </style>
 </head>
-
 <body>
     <div class="container">
         <header>
+            <button class="theme-toggle" onclick="toggleTheme()">🌓 تبديل المظهر (ليلي / نهاري)</button>
             <h1>بورصة العالمي الدولية للأصول والعقارات 🏠</h1>
-            <p id="api-status" style="color: #ef4444; font-weight: bold;">[الخادم قيد الاتصال بالأقسام الحية...]</p>
-            <p style="font-size: 13px; color: var(--text-muted);">⚖️ تنبيه قانوني: المنصة وسيط تقني وإعلاني مرخص بموجب بنود خلو المسؤولية الصارمة وأنظمة الدولة لحفظ حقوق السعي والبيانات.</p>
+            <p id="api-status" style="color: #10b981; font-weight: bold;">✓ متصل بالسحابة وقاعدة البيانات الحية</p>
+            <p style="font-size: 13px; color: #cbd5e1;">⚖️ المنصة وسيط تقني وإعلاني مرخص. البيانات مقفلة برمجياً لحفظ حقوق السعي والخصوصية.</p>
         </header>
 
-        <div class="tabs">
-            <button class="tab-btn active" onclick="openTab(event, 'exchange')">🛒 بورصة تداول الأصول</button>
-            <button class="tab-btn" onclick="openTab(event, 'compliance-gate')">⚖️ بوابة الامتثال والربط الحكومي</button>
-            <button class="tab-btn" onclick="openTab(event, 'communication')">💬 غرف الاتصال والاجتماعات الحية</button>
-            <button class="tab-btn" onclick="openTab(event, 'finance-bank')">🏦 البيانات البنكية وقنوات التواصل</button>
+        <!-- 1. شريط العروض المتحرك التلقائي في حال الخمول -->
+        <div class="showcase-wrapper" id="idle-showcase-box">
+            <div class="showcase-header">
+                <strong style="color: #10b981; font-size: 17px;">🔥 شريط العروض الشاملة (يتحرك تلقائياً عند الخمول ويتوقف عند اللمس للقراءة)</strong>
+                <span id="showcase-status" style="font-size: 12px; color: var(--text-muted);">🔄 حركة تلقائية نشطة</span>
+            </div>
+            <div class="showcase-track" id="showcase-track">
+                <div class="showcase-card">جاري تحميل أحدث العروض من قاعدة البيانات السحابية...</div>
+            </div>
         </div>
 
-        <!-- 1. بورصة تداول الأصول المتعددة وحساب السعي التلقائي -->
-        <div id="exchange" class="tab-content active">
-            <h2>🛒 بورصة تجارة الأصول الاستثمارية المتعددة</h2>
-            <p style="color: var(--text-muted);">🔒 حماية الخصوصية: البيانات مقفلة برمجياً آلياً لحماية حقوق السعي وضمان الجدية قبل التفاوض.</p>
-            
-            <div class="section-grid">
+        <!-- 2. بوابة تحفيز العملاء المنتظمين -->
+        <div class="section-box" style="border: 2px solid #f59e0b;">
+            <h2 style="color: #f59e0b;">👑 بوابة تحفيز العملاء المنتظمين (توفير عملاء وفئات مستهدفة جاهزة)</h2>
+            <p style="font-size: 14px; color: var(--text-muted);">ميزة حصرية للملاك، الوسطاء، المسوقين، والمستثمرين المنتظمين في الدفع والاشتراك: احصل فوراً على قائمة عملاء جاهزين ومطابقين لاهتمامك!</p>
+            <div class="grid-two">
                 <div>
-                    <label>اختر نوع الأصل الاستثماري:</label>
-                    <select id="asset-type">
-                        <option value="realestate_sale">عقارات — صفقات بيع (1%)</option>
-                        <option value="realestate_rent">عقارات — صفقات إيجار سنوي (5%)</option>
-                        <option value="gold">سبائك ذهب ومعادن ثمينة (1%)</option>
-                        <option value="stocks">أسهم شركات خاصة مغلقة (0.5%)</option>
-                        <option value="scrap">سكراب حديد ونحاس ومخلفات مصانع (2%)</option>
+                    <label>صفتك في المنصة:</label>
+                    <select id="vip-user-role">
+                        <option value="مالك عقار">مالك عقار / أصل</option>
+                        <option value="وسيط / مسوق">وسيط / مسوق عقاري</option>
+                        <option value="مستثمر">مستثمر / مطور</option>
                     </select>
                 </div>
                 <div>
-                    <label>قيمة الصفقة الإجمالية (بالريال):</label>
-                    <input type="number" id="asset-price" placeholder="مثال: 2000000">
+                    <label>مجال البحث المستهدف (نوع العقار أو الاستثمار):</label>
+                    <input type="text" id="vip-search-interest" placeholder="مثال: كمباوند سكني، مول تجاري، أرض خام بالرياض...">
                 </div>
             </div>
-            <div class="calc-box" id="saei-live-view">💰 نصيب المنصة التلقائي المتوقع من السعي: 0 ريال</div>
-            <hr>
-            <h3>🎖️ الوسطاء والسعاة المعتمدون</h3>
-            <p style="color: var(--text-muted);">تسجيل وحفظ السعاة آلياً في قاعدة البيانات السحابية برقم رخصة فال المعتمد.</p>
-            <form id="broker-form" onsubmit="event.preventDefault(); addBrokerLive();">
-                <div class="section-grid">
-                    <input type="text" id="broker-name" placeholder="اسم الساعي/المسوق العقاري المعتمد" required>
-                    <input type="text" id="broker-license" placeholder="رقم رخصة فال أو السجل التجاري" required>
-                </div>
-                <button type="submit">📥 توثيق وإضافة الساعي رسمياً بالسحابة</button>
-            </form>
+            <label style="margin-top:12px;">
+                <input type="checkbox" id="vip-regular-paid" style="width:auto; margin-left:8px;"> أؤكد أنني عميل منتظم (لدي اشتراك مدفوع ومنتظم بالموقع/التطبيق)
+            </label>
+            <button type="button" onclick="fetchTargetedLeads()" style="background: #f59e0b; color: #0f172a;">🎯 جلب قائمة العملاء والفئات المستهدفة الآن</button>
+            <div id="vip-targets-result" style="margin-top: 15px;"></div>
         </div>
 
-        <!-- 2. بوابة الامتثال والمسودات ثنائية اللغة ل شروط الدولة والأختام -->
-        <div id="compliance-gate" class="tab-content">
-            <h2>⚖️ بوابة الامتثال ومراجعة التراخيص لصفقات المملكة 🇸🇦</h2>
-            <p style="color: var(--text-muted);">نظام فلترة وحظر تلقائي للامتثال لشروط الدولة وتملك غير السعوديين وضوابط السكراب والذهب الكبرى.</p>
-            
-            <form id="compliance-form">
-                <div class="section-grid">
-                    <div>
-                        <label>نوع الأصل الجاري معالجته:</label>
-                        <select id="asset-type-flex">
-                            <option value="realestate_sale">عقارات — بيع (1%)</option>
-                            <option value="realestate_rent">عقارات — إيجار (5%)</option>
-                            <option value="gold">سبائك ذهب (1%)</option>
-                            <option value="scrap">سكراب حديد ونحاس (2%)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>قيمة الصفقة المرصودة (بالريال):</label>
-                        <input type="number" id="asset-price-flex" placeholder="مثال: 5000000" required>
-                    </div>
-                    <div>
-                        <label>الجنسية وهوية المشتري:</label>
-                        <select id="user-nationality-flex">
-                            <option value="Saudi">مواطن سعودي</option>
-                            <option value="GCC">مواطن خليجي</option>
-                            <option value="Foreigner">مقيم / مستثمر أجنبي</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>موقع العقار (خاص بالقسم العقاري):</label>
-                        <select id="property-location-flex">
-                            <option value="Riyadh">الرياض / جدة / الشرقية</option>
-                            <option value="Makkah">داخل حدود الحرم - مكة المكرمة</option>
-                            <option value="Madinah">داخل حدود الحرم - المدينة المنورة</option>
-                        </select>
-                    </div>
-                </div>
-                <div style="margin-top: 15px;">
-                    <label>بيانات الترخيص أو السجل التجاري الرسمي:</label>
-                    <input type="text" id="license-input-flex" placeholder="أدخل رقم رخصة فال أو سجل تجاري المعادن..." required>
-                </div>
-                <div style="margin-top: 15px; background: #0f172a; padding: 12px; border-radius: 5px; border: 1px dashed #10b981;">
-                    <label><input type="checkbox" id="chamber-stamp-checkbox"> أؤكد إرفاق وإثبات ختم الغرفة التجارية الإلكتروني المعتمد للفاتورة (للذهب والنحاس والسكراب).</label>
-                </div>
-
-                <!-- لوحة تحكم المطور وتجاوز السعي -->
-                <div style="margin-top: 20px; background: #312e81; padding: 15px; border-radius: 6px; border: 1px solid #4338ca;">
-                    <strong style="color: #a5b4fc; display: block; margin-bottom: 5px;">👑 إعدادات السعي والتحكم الاستثنائي (صلاحية المطور المالك):</strong>
-                    <label><input type="checkbox" id="developer-bypass-checkbox"> تفعيل خيار التمرير الفوري الاستثنائي (تجاوز شروط الرخص والأختام تجارياً)</label>
-                    <input type="number" id="custom-saei-flex" placeholder="حدد مبلغ سعي مرن متفق عليه يدوياً (اختياري)">
-                </div>
-
-                <button type="submit" id="compliance-submit">🔍 فحص معالجة الامتثال وتوقيع العقد المبدئي</button>
-            </form>
-            <div id="compliance-result" style="margin-top: 15px; font-weight: bold; color: #10b981;"></div>
-        </div>
-
-        <!-- 3. غرف الاتصال والاجتماعات الحية والشات الموثق المعجل -->
-        <div id="communication" class="tab-content">
+        <!-- 3. بوابة إدراج عقار جديد + خيارات موسعة + تصوير/تحميل الفيديو -->
+        <div class="section-box">

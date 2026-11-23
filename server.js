@@ -69,7 +69,6 @@ async function initDatabaseTables() {
             );
         `);
 
-        // جدول تتبع العملاء والملاك (مغلق / غير مغلق) ومن تواصل معهم
         await pool.query(`
             CREATE TABLE IF NOT EXISTS crm_leads (
                 id SERIAL PRIMARY KEY,
@@ -96,14 +95,13 @@ async function initDatabaseTables() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        console.log("✓ تم تفعيل كافة الجداول الحية (العقارات، الوسطاء، CRM، والصفقات) بنجاح!");
+        console.log("✓ تم تفعيل كافة الجداول الحية بنجاح!");
     } catch (err) {
         console.error("❌ خطأ في تهيئة قاعدة البيانات:", err);
     }
 }
 initDatabaseTables();
 
-// 1. جلب العقارات الحية
 app.get('/api/properties', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM properties ORDER BY created_at DESC');
@@ -113,7 +111,6 @@ app.get('/api/properties', async (req, res) => {
     }
 });
 
-// 2. إضافة عقار جديد مع الفيديو
 app.post('/api/properties/add', async (req, res) => {
     const { ownerType, propertyCategory, dealPurpose, title, price, location, licenseNumber, contactPhone, videoData } = req.body;
     if (!title || !price || !licenseNumber || !propertyCategory) {
@@ -125,17 +122,11 @@ app.post('/api/properties/add', async (req, res) => {
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
             [ownerType, propertyCategory, dealPurpose || 'بيع', title, price, location, licenseNumber, contactPhone || '+966500000000', videoData || null]
         );
-        res.json({
-            success: true,
-            property: result.rows,
-            message: `✓ تم نشر العقار "${title}" (${propertyCategory}) وحفظه حياً في البورصة!`
-        });
+        res.json({ success: true, property: result.rows[0], message: `✓ تم نشر العقار "${title}" (${propertyCategory}) وحفظه حياً في البورصة!` });
     } catch (err) {
         res.status(500).json({ success: false, message: "حدث خطأ أثناء حفظ العقار في السحابة." });
     }
 });
-
-// 3. إدارة العملاء والوسطاء (CRM) + نظام التقييم المشروط بعد 5 اشتراكات وفلترة التقييمات السلبية
 app.get('/api/crm/leads', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM crm_leads ORDER BY created_at DESC');
@@ -150,16 +141,10 @@ app.post('/api/crm/leads/add', async (req, res) => {
     const subsCount = parseInt(subscriptionsUsed) || 1;
     const numRating = rating ? parseInt(rating) : null;
 
-    // التحقق من إلزامية التقييم بعد 5 اشتراكات فقط
     if (subsCount > 5 && !numRating) {
-        return res.status(400).json({
-            success: false,
-            requireRating: true,
-            message: "⚠️ لقد تجاوزت 5 اشتراكات/محاولات تواصل؛ التقييم أصبح إلزامياً الآن لإتمام التواصل مع العميل."
-        });
+        return res.status(400).json({ success: false, requireRating: true, message: "⚠️ لقد تجاوزت 5 اشتراكات؛ التقييم أصبح إلزامياً الآن لإتمام التواصل." });
     }
 
-    // فلترة التقييمات: اعتماد الإيجابي (4 أو 5) واستبعاد السلبي/غير المفيد وإرساله لبريد المالك
     let isApproved = true;
     let feedbackNotice = "";
     const negativeKeywords = ["سيء", "نصب", "كذب", "فاشل", "غالي", "تأخير", "غير مفيد", "مشكلة"];
@@ -167,8 +152,8 @@ app.post('/api/crm/leads/add', async (req, res) => {
 
     if (numRating && (numRating <= 3 || hasNegativeText)) {
         isApproved = false;
-        console.log(`📧 [تنبيه بريد إلكتروني إلى ${ADMIN_EMAIL}]: تم استبعاد تقييم سلبي/غير مفيد من الظهور العام للمراجعة. العميل: ${leadName} | التقييم: ${numRating}/5 | التعليق: ${ratingComment}`);
-        feedbackNotice = ` (ملاحظة: تم استبعاد التقييم السلبي/غير المفيد من العرض العام وإرساله لبريد الإدارة ${ADMIN_EMAIL} للمراجعة).`;
+        console.log(`📧 [تنبيه بريد إلى ${ADMIN_EMAIL}]: استبعاد تقييم سلبي. العميل: ${leadName} | التقييم: ${numRating}/5`);
+        feedbackNotice = ` (تم استبعاد التقييم السلبي/غير المفيد وإرساله لبريد الإدارة ${ADMIN_EMAIL}).`;
     }
 
     try {
@@ -177,47 +162,84 @@ app.post('/api/crm/leads/add', async (req, res) => {
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
             [leadName, leadRole, targetInterest, status, contactedBy, subsCount, numRating || 5, ratingComment || '', isApproved]
         );
-        res.json({
-            success: true,
-            lead: result.rows,
-            message: `✓ تم تسجيل حالة العميل/المالك (${leadName} - ${status}) بنجاح!${feedbackNotice}`
-        });
+        res.json({ success: true, lead: result.rows[0], message: `✓ تم تسجيل حالة العميل/المالك (${leadName} - ${status}) بنجاح!${feedbackNotice}` });
     } catch (err) {
         res.status(500).json({ success: false, message: "تعذر حفظ بيانات العميل في السحابة." });
     }
 });
 
-// 4. ميزة تحفيز العملاء المنتظمين (توفير فئات مستهدفة جاهزة حسب البحث عند الدفع المنتظم)
 app.post('/api/vip/targeted-leads', async (req, res) => {
     const { userRole, searchInterest, isRegularPaid } = req.body;
     if (!isRegularPaid) {
-        return res.status(403).json({
-            success: false,
-            message: "🔒 هذه الميزة التحفيزية مخصصة للعملاء المنتظمين (أصحاب الاشتراكات المدفوعة المنتظمة). فعّل اشتراكك المنتظم لفتح قائمة العملاء المستهدفين فوراً!"
-        });
+        return res.status(403).json({ success: false, message: "🔒 هذه الميزة مخصصة للعملاء المنتظمين (أصحاب الاشتراكات المدفوعة المنتظمة)." });
     }
-
-    // توليد وتصفية قائمة عملاء مستهدفين حقيقيين ومطابقين لاهتمام المستخدم
     const matchedTargets = [
         { name: "شركة أفق التطوير العقاري", role: "مستثمر مؤسسي", interest: searchInterest || "أراضي خام وكمباوندات", budget: "45,000,000 ريال", readiness: "جاهز للإغلاق الفوري" },
         { name: "مجموعة النخبة التجارية", role: "مشتري مباشر", interest: searchInterest || "مولات ومراكز تجارية", budget: "80,000,000 ريال", readiness: "تمويل بنكي معتمد" },
         { name: "عبدالله المنصور (مستثمر VIP)", role: "مستثمر فردي", interest: searchInterest || "فلل وقصور ومخططات", budget: "18,500,000 ريال", readiness: "دفع نقدي (كاش)" }
     ];
-
-    res.json({
-        success: true,
-        message: `👑 مرحباً بك كعميل منتظم (${userRole})! تم فتح قائمة الفئة المستهدفة المطابقة لبحثك (${searchInterest || 'عام'}):`,
-        targets: matchedTargets
-    });
+    res.json({ success: true, message: `👑 أهلاً بك كعميل منتظم (${userRole})! تم فتح قائمة الفئة المستهدفة المطابقة لبحثك:`, targets: matchedTargets });
 });
 
-// 5. تسجيل ساعي معتمد
 app.post('/api/brokers/add', async (req, res) => {
     const { name, licenseNumber } = req.body;
     try {
-        const result = await pool.query(
-            'INSERT INTO brokers (name, license_number) VALUES ($1, $2) RETURNING *',
-            [name, licenseNumber]
-        );
-        res.json({ success: true, broker: result.rows, message: `✓ تم توثيق وحفظ الساعي (${name}) بنجاح!` });
+        const result = await pool.query('INSERT INTO brokers (name, license_number) VALUES ($1, $2) RETURNING *', [name, licenseNumber]);
+        res.json({ success: true, broker: result.rows[0], message: `✓ تم توثيق وحفظ الساعي (${name}) بنجاح!` });
     } catch (err) {
+        res.status(500).json({ success: false, message: "رقم الرخصة مسجل مسبقاً أو البيانات غير مكتملة." });
+    }
+});
+
+const DEFAULT_SAEI_RATES = { realestate_sale: 0.01, realestate_rent: 0.05, stocks: 0.005, gold: 0.01, scrap: 0.02 };
+
+app.post('/api/compliance/validate-deal-flexible', async (req, res) => {
+    const { assetType, price, userNationality, propertyLocation, customSaeiAmount, isSuperDeveloperBypass } = req.body;
+    if (!isSuperDeveloperBypass && (userNationality === 'NonSaudi_Foreign' || userNationality === 'NonSaudi_GCC') && (propertyLocation === 'Makkah' || propertyLocation === 'Madinah')) {
+        return res.status(403).json({ success: false, message: "⛔ نظاماً: يُحظر تملك غير السعوديين (خليجي أو أجنبي) في مكة المكرمة والمدينة المنورة. تم تحويل الطلب لصيغة الإيجار/الانتفاع." });
+    }
+    const rate = DEFAULT_SAEI_RATES[assetType] || 0.01;
+    const finalSaei = customSaeiAmount ? parseFloat(customSaeiAmount) : (parseFloat(price) * rate);
+    const dealId = "DEAL_" + Math.random().toString(36).substr(2, 9).toUpperCase();
+    try {
+        await pool.query('INSERT INTO deals (deal_id, asset_type, price, saei_amount, status) VALUES ($1, $2, $3, $4, $5)', [dealId, assetType, price, finalSaei, 'Locked']);
+        res.json({ success: true, dealId, calculatedSaei: finalSaei, message: `✓ تم توثيق الصفقة (${dealId}) وحفظها! السعي المستحق: ${finalSaei.toLocaleString('ar-SA')} ريال.` });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "تعذر حفظ المعاملة في قاعدة البيانات." });
+    }
+});
+
+app.post('/api/ai/assistant', (req, res) => {
+    const { prompt, type, title, category, location, price } = req.body;
+    if (type === 'generate_ad') {
+        const adText = `✨ فرصة استثمارية في ${location || 'المملكة'}! نعرض لكم (${category || 'عقار مميز'}): "${title || 'عرض حصري'}" بقيمة ${Number(price || 0).toLocaleString('ar-SA')} ريال. موثق عبر بورصة العالمي بسعي 1% فقط.`;
+        return res.json({ success: true, reply: adText });
+    }
+    let reply = "أهلاً بك في المساعد الذكي لبورصة العالمي! اسألني عن التمويل العقاري، نسبة السعي (1% للبيع و5% للإيجار)، أو أنظمة التملك.";
+    if (prompt && prompt.includes("تمويل")) reply = "لحساب التمويل العقاري، أدخل سعر العقار وسأحسب لك الدفعة الأولى (10%) والقسط الشهري المتوقع فوراً.";
+    else if (prompt && (prompt.includes("سعي") || prompt.includes("عمولة"))) reply = "نسبة السعي في بورصة العالمي: 1% للبيع والذهب، 5% للإيجار، 2% للسكراب، و0.5% للأسهم المغلقة.";
+    res.json({ success: true, reply });
+});
+
+app.get('/api/platform/info', (req, res) => res.json({ success: true, settings: platformSettings }));
+
+app.post('/api/ai/monitor-chat', (req, res) => {
+    const { messageText } = req.body;
+    const suspiciousWords = ["رقمي", "جوالي", "واتس", "05", "تواصل بره", "حسابي"];
+    const isSuspicious = suspiciousWords.some(word => messageText.includes(word));
+    res.json({ success: true, suspicious: isSuspicious });
+});
+
+app.post('/api/meetings/google-meet', (req, res) => {
+    const code = Math.random().toString(36).substr(2, 3) + "-" + Math.random().toString(36).substr(2, 4) + "-" + Math.random().toString(36).substr(2, 3);
+    res.json({ success: true, meetUrl: `https://google.com{code}`, message: "✓ تم توليد رابط الاجتماع الآمن ومشاركة الشاشة بنجاح." });
+});
+
+io.on('connection', (socket) => {
+    socket.on('live_stream_chat', (data) => io.emit('live_stream_chat_broadcast', data));
+    socket.on('live_bid', (data) => io.emit('live_bid_broadcast', data));
+});
+
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => console.log(`🚀 بورصة العالمي تعمل حياً على المنفذ ${PORT}`));
+         

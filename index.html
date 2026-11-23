@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بورصة العالمي الدولية للأصول والعقارات</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #ffffff;
+            --text-muted: #cbd5e1;
+            --border-color: #475569;
+            --input-bg: #0f172a;
+        }
+        body.light-mode {
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #0f172a;
+            --text-muted: #475569;
+            --border-color: #cbd5e1;
+            --input-bg: #f8fafc;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 12px;
+            font-size: 16px;
+            line-height: 1.6;
+            transition: background 0.3s, color 0.3s;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding-bottom: 80px; }
+        header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+            color: #ffffff;
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 2px solid #2563eb;
+            position: relative;
+        }
+        .theme-toggle {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            width: auto;
+            padding: 8px 14px;
+            margin: 0;
+            background: rgba(255,255,255,0.15);
+            font-size: 14px;
+        }
+        .showcase-wrapper {
+            background: var(--card);
+            border: 2px solid #10b981;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .showcase-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .showcase-track {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            padding-bottom: 8px;
+        }
+        .showcase-card {
+            min-width: 290px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            flex-shrink: 0;
+        }
+        .badge {
+            display: inline-block;
+            background: #2563eb;
+            color: #fff;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge-closed { background: #16a34a; }
+        .badge-open { background: #d97706; }
+        .section-box {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        h2 {
+            font-size: 20px;
+            color: #10b981;
+            margin-top: 0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+        input, select, button, textarea {
+            padding: 12px;
+            margin-top: 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: var(--input-bg);
+            color: var(--text);
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 15px;
+            font-family: inherit;
+        }
+        label { display: block; margin-top: 12px; font-weight: bold; font-size: 14px; }
+        button {
+            background: #10b981;
+            color: #ffffff;
+            border: none;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        button:disabled { background: #64748b !important; cursor: not-allowed; opacity: 0.7; }
+        .grid-two { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .grid-three { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 15px; }
+        .prop-card {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .action-row { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+        .action-row a, .action-row button {
+            flex: 1;
+            text-align: center;
+            padding: 9px 6px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+            text-decoration: none;
+            color: #fff;
+            margin: 0;
+            min-width: 80px;
+        }
+        .btn-wa { background: #16a34a; }
+        .btn-call { background: #2563eb; }
+        .btn-fav { background: #475569; }
+        .calc-box {
+            background: #1e3a8a;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-weight: bold;
+            color: #38bdf8;
+        }
+        .live-stage {
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            min-height: 240px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #ef4444;
+        }
+        .live-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #ef4444;
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .ai-fab {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: auto;
+            background: linear-gradient(135deg, #2563eb, #10b981);
+            color: #fff;
+            padding: 14px 20px;
+            border-radius: 50px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+            z-index: 999;
+            margin: 0;
+        }
+        .ai-drawer {
+            display: none;
+            position: fixed;
+            bottom: 80px;
+            left: 20px;
+            width: 340px;
+            max-width: 90vw;
+            background: var(--card);
+            border: 2px solid #2563eb;
+            border-radius: 12px;
+            padding: 15px;
+            z-index: 1000;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        video { max-width: 100%; border-radius: 8px; background: #000; }
+        @media (max-width: 768px) {
+            .grid-two { grid-template-columns: 1fr; }
+            .theme-toggle { position: static; margin-bottom: 10px; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <button class="theme-toggle" onclick="toggleTheme()">🌓 تبديل المظهر (ليلي / نهاري)</button>
+            <h1>بورصة العالمي الدولية للأصول والعقارات 🏠</h1>
+            <p id="api-status" style="color: #10b981; font-weight: bold;">✓ متصل بالسحابة وقاعدة البيانات الحية</p>
+            <p style="font-size: 13px; color: #cbd5e1;">⚖️ المنصة وسيط تقني وإعلاني مرخص. البيانات مقفلة برمجياً لحفظ حقوق السعي والخصوصية.</p>
+        </header>
+
+        <!-- 1. شريط العروض المتحرك التلقائي في حال الخمول -->
+        <div class="showcase-wrapper" id="idle-showcase-box">
+            <div class="showcase-header">
+                <strong style="color: #10b981; font-size: 17px;">🔥 شريط العروض الشاملة (يتحرك تلقائياً عند الخمول ويتوقف عند اللمس للقراءة)</strong>
+                <span id="showcase-status" style="font-size: 12px; color: var(--text-muted);">🔄 حركة تلقائية نشطة</span>
+            </div>
+            <div class="showcase-track" id="showcase-track">
+                <div class="showcase-card">جاري تحميل أحدث العروض من قاعدة البيانات السحابية...</div>
+                       </div>
+        </div>
+
+        <!-- 2. بوابة تحفيز العملاء المنتظمين (VIP Leads) -->
+        <div class="section-box" style="border: 2px solid #f59e0b;">
+            <h2 style="color: #f59e0b;">👑 بوابة تحفيز العملاء المنتظمين (توفير عملاء وفئات مستهدفة جاهزة)</h2>
+            <p style="font-size: 14px; color: var(--text-muted);">ميزة حصرية للملاك، الوسطاء، المسوقين، والمستثمرين المنتظمين في الدفع والاشتراك: احصل فوراً على قائمة عملاء جاهزين ومطابقين لاهتمامك!</p>
+            <div class="grid-two">
+                <div>
+                    <label>صفتك في المنصة:</label>
+                    <select id="vip-user-role">
+                        <option value="مالك عقار">مالك عقار / أصل</option>
+                        <option value="وسيط / مسوق">وسيط / مسوق عقاري</option>
+                        <option value="مستثمر">مستثمر / مطور</option>
+                    </select>
+                </div>
+                <div>
+                    <label>مجال البحث المستهدف (نوع العقار أو الاستثمار):</label>
+                    <input type="text" id="vip-search-interest" placeholder="مثال: كمباوند سكني، مول تجاري، أرض خام بالرياض...">
+                </div>
+            </div>
+            <label style="margin-top:12px;">
+                <input type="checkbox" id="vip-regular-paid" style="width:auto; margin-left:8px;"> أؤكد أنني عميل منتظم (لدي اشتراك مدفوع ومنتظم بالموقع/التطبيق)
+            </label>
+            <button type="button" onclick="fetchTargetedLeads()" style="background: #f59e0b; color: #0f172a;">🎯 جلب قائمة العملاء والفئات المستهدفة الآن</button>
+            <div id="vip-targets-result" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- 3. بوابة إدراج عقار جديد + الفيديو (تصوير / تحميل / إرسال) -->
+        <div class="section-box">
+            <h2>🏠 بوابة إدراج عقار جديد (للملاك، المسوقين، والمطورين)</h2>
+            <form id="property-upload-form">
+                <div class="grid-two">
+                    <div>
+                        <label>صفة المعلن:</label>
+                        <select id="prop-owner-type">
+                            <option value="مالك منفرد">مالك (صاحب أصل)</option>
+                            <option value="مسوق / ساعي">فرد (مسوق / ساعي معتمد)</option>
+                            <option value="مطور عقاري">مطور عقاري</option>
+                            <option value="شركة / مؤسسة">شركة / مؤسسة استثمارية</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>نوع العقار (اختر أو أضف خيارك الخاص):</label>
+                        <select id="prop-category" onchange="toggleCustomCategory()">
+                            <option value="فيلا سكنية">فيلا سكنية</option>
+                            <option value="شقة فاخرة">شقة فاخرة</option>
+                            <option value="كمباوند سكني">كمباوند سكني (مجمع مغلق)</option>
+                            <option value="مول تجاري">مول / مركز تجاري</option>
+                            <option value="أرض خام">أرض خام</option>
+                            <option value="مخطط استثماري">مخطط سكني / تجاري</option>
+                            <option value="برج تجاري">برج تجاري / إداري</option>
+                            <option value="عمارة سكنية">عمارة سكنية / استثمارية</option>
+                            <option value="مستودع / هنجر">مستودع / هنجر صناعي</option>
+                            <option value="مصنع">مصنع قائم</option>
+                            <option value="مزرعة">مزرعة / أرض زراعية</option>
+                            <option value="استراحة / شاليه">استراحة / شاليه / منتجع</option>
+                            <option value="قصر">قصر</option>
+                            <option value="مكتب إداري">مكتب إداري / معرض</option>
+                            <option value="CUSTOM">➕ أخرى (إدخال نوع عقار مخصص...)</option>
+                        </select>
+                        <input type="text" id="custom-prop-category" placeholder="اكتب نوع العقار أو الأصل الذي تملكه هنا..." style="display:none; border-color:#10b981;">
+                    </div>
+                    <div>
+                        <label>نوع العملية:</label>
+                        <select id="prop-deal-purpose">
+                            <option value="بيع">بيع مباشر (سعي 1%)</option>
+                            <option value="إيجار">تأجير سنوي (سعي 5%)</option>
+                            <option value="استثمار / تطوير">استثمار / شراكة تطوير</option>
+                            <option value="رهن / تمويل">رهن / تمويل عقاري</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>عنوان ووصف العرض:</label>
+                        <input type="text" id="prop-title" placeholder="مثال: مول تجاري على طريق الملك فهد" required>
+                        <button type="button" onclick="generateAdWithAI()" style="background:#3b82f6; padding:6px 12px; font-size:13px; margin-top:6px; width:auto;">✨ صياغة وصف تسويقي بالمساعد الذكي</button>
+                    </div>
+                    <div>
+                        <label>السعر المستهدف (بالريال):</label>
+                        <input type="number" id="prop-final-price" placeholder="مثال: 15000000" required>
+                    </div>
+                    <div>
+                        <label>المدينة / المنطقة:</label>
+                        <input type="text" id="prop-geo-location" placeholder="مثال: الرياض - حي النرجس" required>
+                    </div>
+                    <div>
+                        <label>رقم رخصة فال أو السجل التجاري:</label>
+                        <input type="text" id="prop-val-license" placeholder="أدخل رقم الترخيص المعتمد..." required>
+                    </div>
+                    <div>
+                        <label>رقم التواصل (يُحجب لحماية السعي):</label>
+                        <input type="text" id="prop-contact-phone" placeholder="مثال: +9665XXXXXXXX" required>
+                    </div>
+                </div>
+
+                <!-- تصوير وتحميل وإرسال الفيديو -->
+                <div style="margin-top: 15px; background: var(--input-bg); padding: 15px; border-radius: 8px; border: 1px dashed #2563eb;">
+                    <strong style="color: #38bdf8;">🎥 إضافة فيديو تعريفي للعقار (تصوير مباشر أو تحميل من الجهاز):</strong>
+                    <div class="grid-two" style="margin-top: 10px;">
+                        <div>
+                            <label>📁 تحميل فيديو من الجوال / الكمبيوتر:</label>
+                            <input type="file" id="prop-video-file" accept="video/*" onchange="handleVideoUpload(event)">
+                        </div>
+                        <div>
+                            <label>📹 أو تصوير فيديو مباشر بالكاميرا الآن:</label>
+                            <div style="display:flex; gap:8px;">
+                                <button type="button" id="btn-start-rec" onclick="startCameraRecording()" style="background:#ef4444; margin-top:8px;">🔴 بدء التصوير</button>
+                                <button type="button" id="btn-stop-rec" onclick="stopCameraRecording()" style="background:#475569; margin-top:8px;" disabled>⏹️ إيقاف وحفظ</button>
+                            </div>
+                        </div>
+                    </div>
+                    <video id="video-preview" controls style="display:none; width:100%; max-height:240px; margin-top:10px;"></video>
+                    <p id="video-status" style="font-size: 13px; color: #10b981; margin: 5px 0 0 0;"></p>
+                </div>
+
+                <button type="submit" id="btn-publish-prop" style="background: #2563eb;">🚀 نشر العقار والفيديو وحفظه حياً في البورصة</button>
+            </form>
+        </div>
+
+        <!-- 4. بوابة البث المباشر (تيك توك) والاجتماعات المرئية (زوم) -->
+        <div class="section-box">
+            <h2>🎥 البث المباشر العقاري (تيك توك) والاجتماعات المرئية (زوم)</h2>
+            <div class="grid-two">
+                <div>
+                    <div class="live-stage" id="live-stage">
+                        <span class="live-badge" id="live-status-badge">⚫ غير متصل بالبث</span>
+                        <video id="live-camera-feed" autoplay muted playsinline style="width:100%; height:240px; object-fit:cover; display:none;"></video>
+                        <p id="live-placeholder" style="color:#94a3b8; text-align:center; padding:15px;">اضغط "بدء البث المباشر" لفتح الكاميرا وعرض العقار للمزايدين حياً</p>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button type="button" onclick="toggleLiveStream()" id="btn-toggle-live" style="background:#ef4444;">🔴 بدء البث المباشر الآن</button>
+                        <button type="button" onclick="createZoomMeeting()" style="background:#2563eb;">💻 اجتماع فيديو ومشاركة شاشة (Zoom/Meet)</button>
+                    </div>
+                </div>
+                <div>
+                    <h3 style="margin-top:0; color:#38bdf8;">💬 الدردشة الحية والمزايدة الفورية</h3>
+                    <div id="live-chat-feed" style="height: 180px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; overflow-y: auto; font-size: 14px;">
+                        <p style="color: var(--text-muted);">مرحباً بكم في غرفة البث والمزايدة الحية...</p>
+                    </div>
+                    <div style="display:flex; gap:6px; margin-top:8px;">
+                        <input type="text" id="live-chat-input" placeholder="اكتب تعليقك أو سعرك للمزايدة..." style="margin:0;">
+                        <button type="button" onclick="sendLiveStreamComment()" style="width:auto; margin:0; padding:0 18px;">إرسال</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. سجل العقارات الحية + البحث والفلترة + حاسبة التمويل -->
+        <div class="section-box">
+            <h2>📋 العقارات والأصول المعروضة حياً في البورصة</h2>

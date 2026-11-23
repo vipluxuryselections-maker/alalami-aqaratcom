@@ -1,3 +1,4 @@
+const crypto = require('node:crypto');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -95,12 +96,372 @@ async function initDatabaseTables() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
+        await pool.query(`
+            ALTER TABLE deals
+                ADD COLUMN IF NOT EXISTS platform_share NUMERIC(15, 2) DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS broker_shares JSONB DEFAULT '[]'::jsonb,
+                ADD COLUMN IF NOT EXISTS unassigned_broker_share NUMERIC(15, 2) DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS payouts_executed BOOLEAN DEFAULT FALSE;
+
+            CREATE TABLE IF NOT EXISTS user_offices (
+                id SERIAL PRIMARY KEY,
+                full_name VARCHAR(150) NOT NULL,
+                phone VARCHAR(50) NOT NULL,
+                email VARCHAR(254),
+                license_number VARCHAR(100),
+                bio TEXT,
+                avatar_base64 TEXT,
+                is_public BOOLEAN NOT NULL DEFAULT TRUE,
+                facility_name VARCHAR(150),
+                subscription_active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS office_ledger (
+                id SERIAL PRIMARY KEY,
+                office_id INT NOT NULL DEFAULT 1,
+                item_type VARCHAR(50) NOT NULL,
+                status VARCHAR(50) NOT NULL DEFAULT 'جديد',
+                title VARCHAR(200) NOT NULL,
+                asset_category VARCHAR(100),
+                deal_type VARCHAR(50),
+                price NUMERIC(15, 2) NOT NULL DEFAULT 0,
+                area NUMERIC(15, 2) NOT NULL DEFAULT 0,
+                contact_phone VARCHAR(50),
+                seriousness_score INT NOT NULL DEFAULT 5,
+                recommendations_count INT NOT NULL DEFAULT 0,
+                interactions_count INT NOT NULL DEFAULT 0,
+                is_featured BOOLEAN NOT NULL DEFAULT FALSE,
+                co_broker_name VARCHAR(100),
+                commission_split VARCHAR(100),
+                loi_attached BOOLEAN NOT NULL DEFAULT FALSE,
+                buy_commitment BOOLEAN NOT NULL DEFAULT FALSE,
+                brokers_commitment TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS appointments (
+                id SERIAL PRIMARY KEY,
+                client_name VARCHAR(150) NOT NULL,
+                topic VARCHAR(200) NOT NULL,
+                appointment_date DATE NOT NULL,
+                appointment_time TIME NOT NULL,
+                status VARCHAR(50) NOT NULL DEFAULT 'مجدول تلقائياً',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
         console.log("✓ تم تفعيل كافة الجداول الحية بنجاح!");
     } catch (err) {
         console.error("❌ خطأ في تهيئة قاعدة البيانات:", err);
     }
 }
-initDatabaseTables();
+app.post('/api/office/profile', async (req, res) => {
+    const {
+        fullName, phone, email, licenseNumber, bio, avatarBase64, isPublic, facilityName
+    } = req.body ?? {};
+    if (
+        typeof fullName !== 'string' || !fullName.trim() || fullName.length > 150 ||
+        typeof phone !== 'string' || !phone.trim() || phone.length > 50 ||
+        (email != null && email !== '' && (typeof email !== 'string' || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) ||
+        (licenseNumber != null && (typeof licenseNumber !== 'string' || licenseNumber.length > 100)) ||
+        (bio != null && (typeof bio !== 'string' || bio.length > 12000)) ||
+        (facilityName != null && (typeof facilityName !== 'string' || facilityName.length > 150)) ||
+        (avatarBase64 != null && (typeof avatarBase64 !== 'string' || avatarBase64.length > 12000000 || !/^[A-Za-z0-9+/]*={0,2}$/.test(avatarBase64))) ||
+        (isPublic != null && typeof isPublic !== 'boolean')
+    ) {
+        return res.status(400).json({ success: false, message: "بيانات المكتب غير صالحة." });
+    }
+
+    try {
+        const result = await pool.query(
+            `INSERT INTO user_offices
+                (id, full_name, phone, email, license_number, bio, avatar_base64, is_public, facility_name)
+             VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (id) DO UPDATE SET
+                full_name = EXCLUDED.full_name,
+                phone = EXCLUDED.phone,
+                email = EXCLUDED.email,
+                license_number = EXCLUDED.license_number,
+                bio = EXCLUDED.bio,
+                avatar_base64 = EXCLUDED.avatar_base64,
+                is_public = EXCLUDED.is_public,
+                facility_name = EXCLUDED.facility_name
+             RETURNING id, full_name, phone, email, license_number, bio,
+                avatar_base64, is_public, facility_name, subscription_active, created_at`,
+            [
+                fullName.trim(), phone.trim(), email || null, licenseNumber || null,
+                bio || null, avatarBase64 || null, isPublic !== false, facilityName || null
+            ]
+        );
+        return res.json({ success: true, office: result.rows[0], message: "تم حفظ بيانات المكتب في قاعدة البيانات." });
+    } catch (err) {
+        console.error("تعذر حفظ ملف المكتب:", err.message);
+        return res.status(500).json({ success: false, message: "تعذر حفظ الملف الشخصي." });
+    }
+});
+
+app.get('/api/office/profile/:id', async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id < 1) {
+        return res.status(400).json({ success: false, message: "معرّف المكتب غير صالح." });
+    }
+    try {
+        const result = await pool.query(
+            `SELECT id, full_name, bio, avatar_base64, facility_name, created_at
+             FROM user_offices
+             WHERE id = $1 AND is_public = TRUE AND subscription_active = TRUE`,
+            [id]
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({ success: false, message: "الملف غير متاح للعامة." });
+        }
+        return res.json({ success: true, office: result.rows[0] });
+    } catch (err) {
+        console.error("تعذر تحميل ملف المكتب:", err.message);
+        return res.status(500).json({ success: false, message: "تعذر تحميل ملف المكتب." });
+    }
+});
+
+app.get('/api/office/network', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT id, full_name, bio, facility_name, avatar_base64
+             FROM user_offices
+             WHERE is_public = TRUE AND subscription_active = TRUE
+             ORDER BY created_at DESC`
+        );
+        return res.json({ success: true, members: result.rows });
+    } catch (err) {
+        console.error("تعذر تحميل شبكة المكاتب:", err.message);
+        return res.status(500).json({ success: false, message: "تعذر تحميل شبكة المكاتب." });
+    }
+});
+
+app.get('/api/ledger', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM office_ledger ORDER BY is_featured DESC, created_at DESC'
+        );
+        return res.json({ success: true, items: result.rows });
+    } catch (err) {
+        console.error("تعذر تحميل الدفتر:", err.message);
+        return res.status(500).json({ success: false, message: "تعذر تحميل الدفتر." });
+    }
+});
+
+app.post('/api/ledger/add', async (req, res) => {
+    const {
+        itemType, status, title, assetCategory, dealType, price, area, contactPhone,
+        seriousnessScore, isFeatured, coBrokerName, commissionSplit, loiAttached,
+        buyCommitment, brokersCommitment
+    } = req.body ?? {};
+    const validOptionalText = (value, limit) =>
+        value == null || value === '' || (typeof value === 'string' && value.length <= limit);
+    const validAmount = (value) =>
+        value == null || value === '' ||
+        (Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 9999999999999.99);
+    if (
+        typeof itemType !== 'string' || !itemType.trim() || itemType.length > 50 ||
+        typeof title !== 'string' || !title.trim() || title.length > 200 ||
+        (status != null && (typeof status !== 'string' || status.length > 50)) ||
+        !validOptionalText(assetCategory, 100) || !validOptionalText(dealType, 50) ||
+        !validOptionalText(coBrokerName, 100) || !validOptionalText(commissionSplit, 100) ||
+        !validOptionalText(brokersCommitment, 12000) ||
+        !validAmount(price) || !validAmount(area) ||
+        (contactPhone != null && contactPhone !== '' &&
+            (typeof contactPhone !== 'string' || contactPhone.length > 50 ||
+             !/^\+?[\d\s()-]{7,50}$/.test(contactPhone) ||
+             (contactPhone.match(/\d/g)?.length ?? 0) < 7)) ||
+        (seriousnessScore != null && (!Number.isInteger(seriousnessScore) || seriousnessScore < 1 || seriousnessScore > 10)) ||
+        (isFeatured != null && typeof isFeatured !== 'boolean') ||
+        (loiAttached != null && typeof loiAttached !== 'boolean') ||
+        (buyCommitment != null && typeof buyCommitment !== 'boolean')
+    ) {
+        return res.status(400).json({ success: false, message: "بيانات السجل غير صالحة." });
+    }
+
+    try {
+        const result = await pool.query(
+            `INSERT INTO office_ledger
+                (item_type, status, title, asset_category, deal_type, price, area, contact_phone,
+                 seriousness_score, is_featured, co_broker_name, commission_split,
+                 loi_attached, buy_commitment, brokers_commitment)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+             RETURNING *`,
+            [
+                itemType.trim(), status || 'جديد', title.trim(), assetCategory || null,
+                dealType || null, price || 0, area || 0, contactPhone || null,
+                seriousnessScore ?? 5, isFeatured === true, coBrokerName || null,
+                commissionSplit || null, loiAttached === true, buyCommitment === true,
+                brokersCommitment || null
+            ]
+        );
+        return res.status(201).json({ success: true, item: result.rows[0], message: `تم حفظ (${title.trim()}) في الدفتر السحابي.` });
+    } catch (err) {
+        console.error("تعذر حفظ سجل الدفتر:", err.message);
+        return res.status(500).json({ success: false, message: "تعذر حفظ السجل." });
+    }
+});
+
+app.post('/api/ledger/feature', async (req, res) => {
+    const id = Number(req.body?.id);
+    if (!Number.isSafeInteger(id) || id < 1) {
+        return res.status(400).json({ success: false, message: "معرّف الإعلان غير صالح." });
+    }
+    try {
+        const result = await pool.query(
+            'UPDATE office_ledger SET is_featured = TRUE WHERE id = $1 RETURNING id',
+            [id]
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({ success: false, message: "الإعلان غير موجود." });
+        }
+        return res.json({ success: true, message: "تم تمييز الإعلان." });
+    } catch (err) {
+        console.error("تعذر تمييز الإعلان:", err.message);
+        return res.status(500).json({ success: false, message: "تعذر تمييز الإعلان." });
+    }
+});
+
+app.get('/api/appointments', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM appointments ORDER BY appointment_date, appointment_time'
+        );
+        return res.json({ success: true, appointments: result.rows });
+    } catch (err) {
+        console.error("تعذر تحميل المواعيد:", err.message);
+        return res.status(500).json({ success: false, message: "تعذر تحميل المواعيد." });
+    }
+});
+
+app.post('/api/appointments/add', async (req, res) => {
+    const { clientName, topic, appointmentDate, appointmentTime } = req.body ?? {};
+    const parsedDate = typeof appointmentDate === 'string' &&
+        /^\d{4}-\d{2}-\d{2}$/.test(appointmentDate)
+        ? Date.parse(`${appointmentDate}T00:00:00Z`)
+        : NaN;
+    const validDate = typeof appointmentDate === 'string' &&
+        /^\d{4}-\d{2}-\d{2}$/.test(appointmentDate) &&
+        !Number.isNaN(parsedDate) &&
+        new Date(parsedDate).toISOString().slice(0, 10) === appointmentDate;
+    const validTime = typeof appointmentTime === 'string' &&
+        /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(appointmentTime);
+    if (
+        typeof clientName !== 'string' || !clientName.trim() || clientName.length > 150 ||
+        typeof topic !== 'string' || !topic.trim() || topic.length > 200 ||
+        !validDate || !validTime
+    ) {
+        return res.status(400).json({ success: false, message: "بيانات الموعد غير مكتملة أو غير صالحة." });
+    }
+    try {
+        const result = await pool.query(
+            `INSERT INTO appointments (client_name, topic, appointment_date, appointment_time)
+             VALUES ($1, $2, $3, $4) RETURNING *`,
+            [clientName.trim(), topic.trim(), appointmentDate, appointmentTime]
+        );
+        return res.status(201).json({ success: true, appointment: result.rows[0], message: "تم حفظ الموعد في قاعدة البيانات." });
+    } catch (err) {
+        console.error("تعذر حفظ الموعد:", err.message);
+        return res.status(500).json({ success: false, message: "تعذر حفظ الموعد." });
+    }
+});
+
+app.get('/api/partners', (req, res) => {
+    res.json({
+        success: true,
+        partners: [
+            { category: "جهات تنظيمية", name: "الهيئة العامة للعقار (REGA)", phone: "199011", url: "https://rega.gov.sa", desc: "تنظيم وخدمات القطاع العقاري" },
+            { category: "صناديق سيادية وعقارية", name: "صندوق الاستثمارات العامة (PIF)", phone: "", url: "https://pif.gov.sa", desc: "المشاريع الكبرى والتطوير الاستثماري" },
+            { category: "صناديق سيادية وعقارية", name: "صندوق التنمية العقارية (REDF)", phone: "199088", url: "https://redf.gov.sa", desc: "برامج الدعم السكني والتمويل العقاري" },
+            { category: "صناديق سيادية وعقارية", name: "الشركة الوطنية للإسكان (NHC) وروشن", phone: "", url: "https://nhc.sa", desc: "المشاريع السكنية والمجتمعات المتكاملة" },
+            { category: "بنوك سعودية", name: "البنك الأهلي السعودي (SNB)", phone: "920001000", url: "https://alahli.com", desc: "التمويل العقاري" },
+            { category: "بنوك سعودية", name: "مصرف الراجحي", phone: "920003344", url: "https://alrajhibank.com.sa", desc: "التمويل العقاري والاستثماري" },
+            { category: "بنوك سعودية", name: "بنك الرياض", phone: "920002470", url: "https://riyadbank.com", desc: "تمويل الشركات والمشاريع العقارية" },
+            { category: "بنوك سعودية", name: "مصرف الإنماء", phone: "8001208000", url: "https://alinma.com", desc: "التمويل العقاري" },
+            { category: "بنوك سعودية", name: "البنك السعودي الأول (SAB)", phone: "920007222", url: "https://sab.com", desc: "تمويل المطورين والمحافظ العقارية" },
+            { category: "بنوك سعودية", name: "بنك البلاد", phone: "920001002", url: "https://bankalbilad.com", desc: "التمويل العقاري والرهن" },
+            { category: "بنوك سعودية", name: "البنك السعودي الفرنسي (BSF)", phone: "8001242121", url: "https://bsf.sa", desc: "تمويل الأصول والمشاريع" },
+            { category: "بنوك سعودية", name: "البنك العربي الوطني (ANB)", phone: "8001244040", url: "https://anb.com.sa", desc: "الحلول التمويلية والعقارية" },
+            { category: "بنوك سعودية", name: "بنك الجزيرة", phone: "8002440404", url: "https://bankaljazira.com", desc: "التمويل العقاري للأفراد والشركات" }
+        ]
+    });
+});
+
+app.post('/api/deals/create-flexible', async (req, res) => {
+    const { assetType, price, brokerIds, customSaeiAmount } = req.body ?? {};
+    const rate = DEFAULT_SAEI_RATES[assetType];
+    const amount = (value) =>
+        (typeof value === 'number' || typeof value === 'string') &&
+        /^\d+(?:\.\d{1,2})?$/.test(String(value).trim()) &&
+        Number.isFinite(Number(value)) && Number(value) > 0;
+    if (
+        !rate || !amount(price) ||
+        (customSaeiAmount != null && !amount(customSaeiAmount)) ||
+        !Array.isArray(brokerIds) || brokerIds.length > 50 ||
+        !brokerIds.every((id) => typeof id === 'string' && id.trim().length > 0 && id.length <= 120) ||
+        new Set(brokerIds).size !== brokerIds.length
+    ) {
+        return res.status(400).json({ success: false, message: "بيانات الصفقة أو قائمة الوسطاء غير صالحة." });
+    }
+
+    const saeiAmount = Number(customSaeiAmount ?? Number(price) * rate);
+    if (!Number.isFinite(saeiAmount) || saeiAmount <= 0) {
+        return res.status(400).json({ success: false, message: "مبلغ السعي غير صالح." });
+    }
+    const platformShare = Math.round(saeiAmount * 50) / 100;
+    const brokerPool = Math.round((saeiAmount - platformShare) * 100);
+    const sharePerBroker = brokerIds.length ? Math.floor(brokerPool / brokerIds.length) : 0;
+    const brokerShares = brokerIds.map((brokerId, index) => ({
+        brokerId,
+        amount: Number(((index === brokerIds.length - 1
+            ? brokerPool - sharePerBroker * index
+            : sharePerBroker) / 100).toFixed(2))
+    }));
+    const distributedShares = brokerShares.reduce((sum, broker) => sum + Math.round(broker.amount * 100), 0);
+    const deal = {
+        dealId: `DEAL_${crypto.randomUUID()}`,
+        assetType,
+        price: Number(Number(price).toFixed(2)),
+        saeiAmount: Number(saeiAmount.toFixed(2)),
+        platformShare: Number(platformShare.toFixed(2)),
+        brokerShares,
+        unassignedBrokerShare: Number(((brokerPool - distributedShares) / 100).toFixed(2)),
+        status: 'awaiting_payment',
+        payoutsExecuted: false
+    };
+    try {
+        await pool.query(
+            `INSERT INTO deals
+                (deal_id, asset_type, price, saei_amount, status, platform_share,
+                 broker_shares, unassigned_broker_share, payouts_executed)
+             VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)`,
+            [
+                deal.dealId, deal.assetType, deal.price, deal.saeiAmount, deal.status,
+                deal.platformShare, JSON.stringify(deal.brokerShares),
+                deal.unassignedBrokerShare, deal.payoutsExecuted
+            ]
+        );
+        return res.status(201).json({
+            success: true,
+            ...deal,
+            message: "تم حفظ سجل الصفقة في قاعدة البيانات. لا يتم تنفيذ أي دفعة."
+        });
+    } catch (err) {
+        console.error("تعذر حفظ الصفقة:", err.message);
+        return res.status(500).json({ success: false, message: "تعذر حفظ الصفقة." });
+    }
+});
+
+app.get('/api/deals', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM deals ORDER BY created_at DESC');
+        return res.json({ success: true, deals: result.rows });
+    } catch (err) {
+        console.error("تعذر تحميل الصفقات:", err.message);
+        return res.status(500).json({ success: false, message: "تعذر تحميل الصفقات." });
+    }
+});
 
 app.get('/api/properties', async (req, res) => {
     try {
@@ -241,5 +602,7 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => console.log(`🚀 بورصة العالمي تعمل حياً على المنفذ ${PORT}`));
+initDatabaseTables().then(() => {
+    server.listen(PORT, () => console.log(`🚀 بورصة العالمي تعمل حياً على المنفذ ${PORT}`));
+});
          

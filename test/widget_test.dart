@@ -1,87 +1,46 @@
-import 'dart:convert';
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
-
-import 'package:alalami_aqarat/app_shell.dart';
-import 'package:alalami_aqarat/services/api_client.dart';
+import 'package:alalami_aqarat/navigation_policy.dart';
 
 void main() {
-  ApiClient createApi() => ApiClient(
-        client: MockClient((_) async {
-          return http.Response(
-            jsonEncode({
-              'success': true,
-              'items': <Object>[],
-              'members': <Object>[],
-              'partners': <Object>[],
-            }),
-            200,
-            headers: const {'content-type': 'application/json'},
-          );
-        }),
-      );
+  group('external app link policy', () {
+    test('routes supported phone and conferencing links externally', () {
+      for (final url in [
+        'tel:+966500000000',
+        'https://wa.me/966500000000',
+        'https://api.whatsapp.com/send',
+        'https://zoom.us/j/123',
+        'https://us02.zoom.us/j/123',
+        'https://meet.google.com/abc-defg-hij',
+      ]) {
+        expect(shouldOpenExternally(Uri.parse(url)), isTrue, reason: url);
+      }
+    });
 
-  Future<void> pumpApp(WidgetTester tester, ApiClient api) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Directionality(
-          textDirection: TextDirection.rtl,
-          child: BourseAppShell(
-            isDarkMode: true,
-            onToggleTheme: () {},
-            api: api,
-          ),
-        ),
-      ),
+    test('rejects unsafe schemes and lookalike domains', () {
+      for (final url in [
+        'javascript:alert(1)',
+        'http://wa.me/966500000000',
+        'https://wa.me.attacker.example/',
+        'https://zoom.us.attacker.example/',
+        'tel:javascript',
+      ]) {
+        expect(shouldOpenExternally(Uri.parse(url)), isFalse, reason: url);
+      }
+    });
+  });
+
+  test('first-party permissions are restricted to the HTTPS platform origin', () {
+    expect(
+      isFirstPartyUri(Uri.parse('https://alalami-aqaratcom.onrender.com/')),
+      isTrue,
     );
-    await tester.pump();
-  }
-
-  testWidgets('marketplace and draggable assistant render in RTL', (
-    WidgetTester tester,
-  ) async {
-    final api = createApi();
-    addTearDown(api.close);
-
-    await pumpApp(tester, api);
-
-    expect(find.text('السوق المتكاملة'), findsOneWidget);
-    expect(find.text('اسأل المساعد'), findsOneWidget);
-    expect(find.text('المكتب'), findsOneWidget);
-    expect(find.text('إضافة'), findsOneWidget);
-  });
-
-  testWidgets('office tab shows profile and ledger navigation', (
-    WidgetTester tester,
-  ) async {
-    final api = createApi();
-    addTearDown(api.close);
-
-    await pumpApp(tester, api);
-    await tester.tap(find.text('المكتب'));
-    await tester.pump();
-
-    expect(find.text('المستخدم والمكتب'), findsOneWidget);
-    expect(find.text('تسجيل منشأة'), findsOneWidget);
-    expect(find.text('طلباتي'), findsOneWidget);
-  });
-
-  testWidgets('assistant can be hidden and restored', (
-    WidgetTester tester,
-  ) async {
-    final api = createApi();
-    addTearDown(api.close);
-
-    await pumpApp(tester, api);
-    await tester.tap(find.byTooltip('إخفاء المساعد'));
-    await tester.pump();
-    expect(find.byTooltip('إظهار المساعد'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('إظهار المساعد'));
-    await tester.pump();
-    expect(find.text('اسأل المساعد'), findsOneWidget);
+    expect(
+      isFirstPartyUri(Uri.parse('http://alalami-aqaratcom.onrender.com/')),
+      isFalse,
+    );
+    expect(
+      isFirstPartyUri(Uri.parse('https://attacker.example/')),
+      isFalse,
+    );
   });
 }

@@ -24,6 +24,12 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>تُستخدم الكاميرا عند اختيارك تصوير أو مشاركة محتوى داخل المنصة.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>يُستخدم الميكروفون عند اختيارك ميزة صوتية داخل المنصة.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>يُستخدم الموقع عند طلبك تحديد موقع عقار أو عرض الخريطة.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

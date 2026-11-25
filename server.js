@@ -169,6 +169,16 @@ async function initializeSuperAppTables() {
       status VARCHAR(50) DEFAULT 'مجدول تلقائياً',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS career_applications (
+      id BIGSERIAL PRIMARY KEY,
+      full_name VARCHAR(150) NOT NULL,
+      email VARCHAR(254) NOT NULL,
+      phone VARCHAR(50) NOT NULL,
+      role VARCHAR(40) NOT NULL,
+      note TEXT NOT NULL,
+      privacy_consent_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
     CREATE TABLE IF NOT EXISTS deals (
       deal_id VARCHAR(120) PRIMARY KEY,
       asset_type VARCHAR(50) NOT NULL,
@@ -234,6 +244,9 @@ app.use(
       directives: {
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        connectSrc: ["'self'", 'https://api.open-meteo.com'],
+        imgSrc: ["'self'", 'data:', 'blob:'],
+        mediaSrc: ["'self'", 'blob:'],
       },
     },
   }),
@@ -568,6 +581,53 @@ app.get('/api/health', (req, res) => {
   res.json({ success: true, service: 'aqarat-app-api' });
 });
 
+app.post('/api/careers/apply', async (req, res) => {
+  const { fullName, email, phone, role, note, privacyConsent } = req.body ?? {};
+  const validPhone =
+    typeof phone === 'string' &&
+    phone.length <= 50 &&
+    /^\+?[\d\s()-]{7,50}$/.test(phone) &&
+    (phone.match(/\d/g)?.length ?? 0) >= 7;
+  if (
+    !isNonEmptyString(fullName, 150) ||
+    !isNonEmptyString(email, 254) ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+    !validPhone ||
+    !['technology', 'real-estate', 'operations', 'other'].includes(role) ||
+    !isNonEmptyString(note, 2000) ||
+    privacyConsent !== true
+  ) {
+    res.status(400).json({
+      success: false,
+      message: 'بيانات طلب التوظيف أو موافقة الخصوصية غير صالحة.',
+    });
+    return;
+  }
+
+  const pool = await getDatabaseOrRespond(res);
+  if (!pool) return;
+  try {
+    const result = await pool.query(
+      `INSERT INTO career_applications (full_name, email, phone, role, note)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, created_at`,
+      [fullName.trim(), email.trim(), phone.trim(), role, note.trim()],
+    );
+    res.status(201).json({
+      success: true,
+      application: result.rows[0],
+      emailNotificationSent: false,
+      message: 'تم حفظ طلب التوظيف. إشعار البريد غير مهيأ حالياً.',
+    });
+  } catch (error) {
+    console.error('Failed to save career application:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'تعذر حفظ طلب التوظيف.',
+    });
+  }
+});
+
 app.post('/api/office/profile', async (req, res) => {
   const {
     fullName,
@@ -720,6 +780,7 @@ app.post('/api/ledger/add', async (req, res) => {
     location,
     ownerType,
     contactPhone,
+    contactConsent,
     seriousnessScore,
     isFeatured,
     coBrokerName,
@@ -759,6 +820,8 @@ app.post('/api/ledger/add', async (req, res) => {
         contactPhone.length > 50 ||
         !/^\+?[\d\s()-]{7,50}$/.test(contactPhone) ||
         (contactPhone.match(/\d/g)?.length ?? 0) < 7)) ||
+    (contactPhone !== undefined && contactConsent !== true) ||
+    (contactConsent !== undefined && typeof contactConsent !== 'boolean') ||
     (seriousnessScore !== undefined &&
       (!Number.isInteger(seriousnessScore) ||
         seriousnessScore < 1 ||

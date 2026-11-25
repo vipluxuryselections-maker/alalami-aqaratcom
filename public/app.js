@@ -27,9 +27,39 @@ const listingSubmit = document.getElementById('listing-submit');
 const listingStatus = document.getElementById('listing-status');
 const listingResults = document.getElementById('listing-results');
 const refreshListingsButton = document.getElementById('refresh-listings');
+const listingPath = document.getElementById('listing-path');
+const listingContactPhone = document.getElementById('listing-contact-phone');
+const listingContactConsent = document.getElementById('listing-contact-consent');
+const listingText = document.getElementById('listing-text');
+const parserStatus = document.getElementById('parser-status');
+const mapPreview = document.getElementById('map-preview');
+const mediaInput = document.getElementById('listing-media');
+const mediaDropZone = document.getElementById('media-drop-zone');
+const mediaPreview = document.getElementById('media-preview');
+const careerForm = document.getElementById('career-form');
+const careerSubmit = document.getElementById('career-submit');
+const careerStatus = document.getElementById('career-status');
+const marketSort = document.getElementById('listing-sort');
+const partnersList = document.getElementById('partners-list');
+const mortgageForm = document.getElementById('mortgage-form');
+const mortgageResult = document.getElementById('mortgage-result');
 let pendingCompliancePayload = null;
 let modalPreviousFocus = null;
 let activeContractAsset = null;
+let ledgerItems = [];
+let selectedMarketFilter = 'all';
+let mediaObjectUrls = [];
+let accessibilityScale = 1;
+const favoriteStorageKey = 'aqarat-favorite-listings';
+let favoriteIds = new Set();
+try {
+  const savedFavorites = JSON.parse(localStorage.getItem(favoriteStorageKey) || '[]');
+  if (Array.isArray(savedFavorites)) {
+    favoriteIds = new Set(savedFavorites.map(String));
+  }
+} catch (error) {
+  console.warn('Could not read locally saved favorites:', error);
+}
 const rates = {
   realestate_sale: 0.01,
   realestate_rent: 0.05,
@@ -93,6 +123,93 @@ function updateCustomCategoryVisibility() {
   }
 }
 
+function renderLedgerListings() {
+  listingResults.replaceChildren();
+  const filtered = ledgerItems.filter((item) => {
+    const type = String(item.item_type || '');
+    switch (selectedMarketFilter) {
+      case 'request':
+        return type.includes('طلب');
+      case 'listing':
+        return type.includes('إعلان');
+      case 'owner':
+        return type.includes('مالك') || String(item.owner_type || '').includes('مالك');
+      case 'opportunity':
+        return type.includes('فرصة') || type.includes('صفقة');
+      case 'featured':
+        return item.is_featured === true;
+      case 'favorites':
+        return favoriteIds.has(String(item.id));
+      default:
+        return true;
+    }
+  });
+
+  const sorters = {
+    newest: (a, b) => new Date(b.created_at) - new Date(a.created_at),
+    oldest: (a, b) => new Date(a.created_at) - new Date(b.created_at),
+    serious: (a, b) => Number(b.seriousness_score || 0) - Number(a.seriousness_score || 0),
+    'price-desc': (a, b) => Number(b.price || 0) - Number(a.price || 0),
+    'price-asc': (a, b) => Number(a.price || 0) - Number(b.price || 0),
+    'area-desc': (a, b) => Number(b.area || 0) - Number(a.area || 0),
+    'interactions-desc': (a, b) => Number(b.interactions_count || 0) - Number(a.interactions_count || 0),
+  };
+  filtered.sort(sorters[marketSort.value] || sorters.newest);
+  if (filtered.length === 0) {
+    const emptyState = document.createElement('p');
+    emptyState.className = 'muted';
+    emptyState.textContent = selectedMarketFilter === 'favorites'
+      ? 'لم تضف إعلانات إلى المفضلة على هذا الجهاز بعد.'
+      : 'لا توجد نتائج مطابقة لهذا التصنيف.';
+    listingResults.append(emptyState);
+    return;
+  }
+
+  const formatPrice = new Intl.NumberFormat('ar-SA', { maximumFractionDigits: 2 });
+  for (const item of filtered) {
+    const card = document.createElement('article');
+    card.className = 'listing-card';
+    const favorite = document.createElement('button');
+    favorite.className = 'favorite-button';
+    favorite.type = 'button';
+    favorite.setAttribute('aria-label', 'إضافة إلى المفضلة');
+    favorite.setAttribute('aria-pressed', String(favoriteIds.has(String(item.id))));
+    favorite.textContent = '♥';
+    favorite.addEventListener('click', () => {
+      const id = String(item.id);
+      if (favoriteIds.has(id)) favoriteIds.delete(id);
+      else favoriteIds.add(id);
+      try {
+        localStorage.setItem(favoriteStorageKey, JSON.stringify([...favoriteIds]));
+      } catch (error) {
+        console.error('Could not save favorites on this device:', error);
+      }
+      renderLedgerListings();
+    });
+
+    const badge = document.createElement('span');
+    badge.className = 'listing-kind-badge';
+    badge.textContent = [
+      item.item_type || 'سجل',
+      item.asset_category || 'تصنيف غير محدد',
+      item.deal_type || 'غرض غير محدد',
+    ].join(' • ');
+    const title = document.createElement('h4');
+    title.textContent = item.title || 'إعلان بدون عنوان';
+    const location = document.createElement('p');
+    location.textContent = `الموقع: ${item.location || 'غير محدد'}`;
+    const price = document.createElement('p');
+    price.textContent = `السعر: ${formatPrice.format(Number(item.price) || 0)} ريال`;
+    const area = document.createElement('p');
+    area.textContent = `المساحة: ${formatPrice.format(Number(item.area) || 0)} م²`;
+    const contactNote = document.createElement('p');
+    contactNote.className = 'footnote';
+    contactNote.textContent = 'بيانات التواصل خاصة؛ لا تُعرض قبل تسجيل الدخول والتحقق من الصلاحيات.';
+    card.append(favorite, badge, title, location, price, area, contactNote);
+    listingResults.append(card);
+  }
+}
+
 async function loadLedgerListings() {
   try {
     const response = await fetch('/api/ledger', {
@@ -105,38 +222,8 @@ async function loadLedgerListings() {
       );
     }
 
-    listingResults.replaceChildren();
-    if (data.items.length === 0) {
-      const emptyState = document.createElement('p');
-      emptyState.className = 'muted';
-      emptyState.textContent = 'لا توجد إعلانات مسجلة بعد.';
-      listingResults.append(emptyState);
-      return;
-    }
-
-    const formatPrice = new Intl.NumberFormat('ar-SA', {
-      maximumFractionDigits: 2,
-    });
-    for (const item of data.items) {
-      const card = document.createElement('article');
-      card.className = 'listing-card';
-      const badge = document.createElement('span');
-      badge.className = 'listing-kind-badge';
-      badge.textContent = [
-        item.asset_category || 'تصنيف غير محدد',
-        item.deal_type || 'غرض غير محدد',
-      ].join(' • ');
-      const title = document.createElement('h4');
-      title.textContent = item.title || 'إعلان بدون عنوان';
-      const location = document.createElement('p');
-      location.textContent = `الموقع: ${item.location || 'غير محدد'}`;
-      const price = document.createElement('p');
-      price.textContent = `السعر: ${formatPrice.format(Number(item.price) || 0)} ريال`;
-      const area = document.createElement('p');
-      area.textContent = `المساحة: ${formatPrice.format(Number(item.area) || 0)} م²`;
-      card.append(badge, title, location, price, area);
-      listingResults.append(card);
-    }
+    ledgerItems = data.items;
+    renderLedgerListings();
   } catch (error) {
     console.error('Ledger listing request failed:', error);
     const errorMessage = document.createElement('p');
@@ -174,7 +261,7 @@ async function submitListing(event) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        itemType: listingKind.value === 'real-estate' ? 'إعلان عقاري' : 'عرض أصل',
+          itemType: listingPath.value,
         status: 'جديد',
         title: document.getElementById('listing-title').value.trim(),
         assetCategory: category,
@@ -183,6 +270,8 @@ async function submitListing(event) {
         area: Number(document.getElementById('listing-area').value || 0),
         location: document.getElementById('listing-location').value.trim(),
         ownerType: document.getElementById('listing-owner-type').value.trim(),
+        contactPhone: listingContactPhone.value.trim() || undefined,
+        contactConsent: listingContactConsent.checked,
       }),
     });
     const data = await response.json().catch(() => null);
@@ -194,6 +283,10 @@ async function submitListing(event) {
     listingStatus.textContent = data.message || 'تم حفظ الإعلان.';
     listingStatus.dataset.state = 'success';
     listingForm.reset();
+    clearMediaPreview();
+    listingText.value = '';
+    mapPreview.replaceChildren();
+    mapPreview.hidden = true;
     updateListingCategories();
     await loadLedgerListings();
   } catch (error) {
@@ -206,6 +299,303 @@ async function submitListing(event) {
   } finally {
     listingSubmit.disabled = false;
   }
+}
+
+function normalizeArabicDigits(value) {
+  return value
+    .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0))
+    .replace(/[٫٬،]/g, (separator) => separator === '٫' ? '.' : ',');
+}
+
+function extractMapUrl(text) {
+  const candidate = text.match(/https?:\/\/[^\s<>"']+/i)?.[0]?.replace(/[),،.]+$/, '');
+  if (!candidate) return null;
+  try {
+    const url = new URL(candidate);
+    const isAllowedHost = [
+      'maps.app.goo.gl',
+      'maps.google.com',
+      'www.google.com',
+      'google.com',
+    ].includes(url.hostname.toLowerCase());
+    return url.protocol === 'https:' && isAllowedHost ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function analyzeListingText() {
+  const text = normalizeArabicDigits(listingText.value.trim());
+  if (!text) {
+    parserStatus.textContent = 'الصق نص الإعلان أولاً.';
+    return;
+  }
+
+  const filled = [];
+  const categoryMatches = [
+    ...listingCategories['real-estate'].map((value) => ({ value, kind: 'real-estate' })),
+    ...listingCategories.asset.map((value) => ({ value, kind: 'asset' })),
+    { value: 'أراضي', match: 'أرض', kind: 'real-estate' },
+    { value: 'فلل', match: 'فيلا', kind: 'real-estate' },
+    { value: 'عمائر', match: 'عمارة', kind: 'real-estate' },
+    { value: 'شقق', match: 'شقة', kind: 'real-estate' },
+  ].sort((a, b) => b.value.length - a.value.length);
+  const category = categoryMatches.find(({ value, match }) => text.includes(match || value));
+  if (category) {
+    listingKind.value = category.kind;
+    updateListingCategories();
+    listingCategory.value = category.value;
+    updateCustomCategoryVisibility();
+    filled.push('التصنيف');
+  }
+
+  const purpose = [
+    ['إيجار', /إيجار|للإيجار|للايجار/],
+    ['شراء', /شراء|مطلوب\s+(?:شراء|عقار|أرض)/],
+    ['استثمار', /استثمار|استثماري/],
+    ['بيع', /بيع|للبيع/],
+  ].find(([, pattern]) => pattern.test(text));
+  if (purpose) {
+    document.getElementById('listing-deal-type').value = purpose[0];
+    filled.push('الغرض');
+  }
+
+  const priceMatches = [...text.matchAll(/([\d,]+(?:\.\d+)?)\s*(مليار|مليون|ألف|الف|ريال)/g)];
+  const priceMatch = priceMatches.find((match) => match[2] !== 'ريال') || priceMatches[0];
+  if (priceMatch) {
+    const amount = Number(priceMatch[1].replace(/,/g, ''));
+    const multiplier = { مليار: 1e9, مليون: 1e6, ألف: 1e3, الف: 1e3, ريال: 1 }[priceMatch[2]];
+    if (Number.isFinite(amount * multiplier) && amount * multiplier <= 9999999999999.99) {
+      document.getElementById('listing-price').value = String(amount * multiplier);
+      filled.push('السعر');
+    }
+  }
+
+  const areaMatch = text.match(/([\d,]+(?:\.\d+)?)\s*(?:متر(?:\s+مربع)?|م²|م2)/);
+  if (areaMatch) {
+    const area = Number(areaMatch[1].replace(/,/g, ''));
+    if (Number.isFinite(area) && area <= 9999999999999.99) {
+      document.getElementById('listing-area').value = String(area);
+      filled.push('المساحة');
+    }
+  }
+
+  const cities = [
+    'الرياض', 'جدة', 'الدمام', 'مكة المكرمة', 'المدينة المنورة',
+    'الخبر', 'الطائف', 'أبها', 'تبوك', 'بريدة', 'ينبع',
+  ];
+  const city = cities.find((name) => text.includes(name));
+  if (city) {
+    document.getElementById('listing-location').value = city;
+    filled.push('المدينة');
+  }
+
+  const phoneMatch = text.match(/(?:\+?966|00966)?[\s-]*0?5(?:[\s-]*\d){8}/);
+  if (phoneMatch) {
+    let phone = phoneMatch[0].replace(/[\s-]/g, '');
+    if (phone.startsWith('00966')) phone = `+966${phone.slice(5)}`;
+    else if (phone.startsWith('966')) phone = `+${phone}`;
+    listingContactPhone.value = phone;
+    listingContactConsent.required = true;
+    filled.push('رقم التواصل');
+  }
+
+  const title = text.split(/\r?\n/).map((line) => line.trim()).find(Boolean);
+  if (title && !document.getElementById('listing-title').value.trim()) {
+    document.getElementById('listing-title').value = title.slice(0, 200);
+    filled.push('العنوان');
+  }
+
+  const mapUrl = extractMapUrl(text);
+  mapPreview.replaceChildren();
+  if (mapUrl) {
+    const link = document.createElement('a');
+    link.href = mapUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = 'فتح موقع الإعلان في خرائط Google';
+    mapPreview.append(link);
+    mapPreview.hidden = false;
+    filled.push('رابط الخريطة');
+  } else {
+    mapPreview.hidden = true;
+  }
+
+  parserStatus.textContent = filled.length
+    ? `تحليل محلي تقريبي؛ راجع القيم قبل الحفظ. تم تعبئة: ${filled.join('، ')}.`
+    : 'لم أتعرف على حقول مدعومة. يمكنك إدخالها يدوياً.';
+}
+
+function clearMediaPreview() {
+  for (const objectUrl of mediaObjectUrls) URL.revokeObjectURL(objectUrl);
+  mediaObjectUrls = [];
+  mediaPreview.replaceChildren();
+  mediaInput.value = '';
+}
+
+function showMediaPreview(files) {
+  clearMediaPreview();
+  const validFiles = [...files].filter((file) =>
+    (file.type.startsWith('image/') || file.type.startsWith('video/')) &&
+    file.size <= 20 * 1024 * 1024
+  ).slice(0, 10);
+  if (validFiles.length !== files.length) {
+    parserStatus.textContent = 'تم تجاهل ملفات غير مدعومة أو أكبر من 20 ميغابايت؛ الحد الأقصى 10 ملفات.';
+  }
+
+  for (const file of validFiles) {
+    const objectUrl = URL.createObjectURL(file);
+    mediaObjectUrls.push(objectUrl);
+    const figure = document.createElement('figure');
+    const preview = document.createElement(file.type.startsWith('video/') ? 'video' : 'img');
+    preview.src = objectUrl;
+    if (preview instanceof HTMLVideoElement) {
+      preview.controls = true;
+      preview.preload = 'metadata';
+    } else {
+      preview.alt = file.name;
+    }
+    const caption = document.createElement('figcaption');
+    caption.textContent = file.name;
+    figure.append(preview, caption);
+    mediaPreview.append(figure);
+  }
+}
+
+async function submitCareerApplication(event) {
+  event.preventDefault();
+  if (careerSubmit.disabled) return;
+  careerSubmit.disabled = true;
+  careerStatus.textContent = 'جارٍ إرسال الطلب إلى الخادم...';
+  careerStatus.dataset.state = 'pending';
+  try {
+    const response = await fetch('/api/careers/apply', {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: document.getElementById('career-name').value.trim(),
+        email: document.getElementById('career-email').value.trim(),
+        phone: document.getElementById('career-phone').value.trim(),
+        role: document.getElementById('career-role').value,
+        note: document.getElementById('career-note').value.trim(),
+        privacyConsent: document.getElementById('career-consent').checked,
+      }),
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data?.success !== true) {
+      throw new Error(data?.message || `تعذر إرسال الطلب (HTTP ${response.status}).`);
+    }
+    careerStatus.textContent = data.emailNotificationSent
+      ? 'تم حفظ الطلب وإرسال إشعار البريد.'
+      : 'تم حفظ الطلب في قاعدة البيانات؛ إشعار البريد غير مهيأ حالياً.';
+    careerStatus.dataset.state = 'success';
+    careerForm.reset();
+  } catch (error) {
+    console.error('Career application failed:', error);
+    careerStatus.textContent = error instanceof TypeError
+      ? 'تعذر الاتصال بالخادم؛ لم يتم إرسال الطلب.'
+      : error.message;
+    careerStatus.dataset.state = 'error';
+  } finally {
+    careerSubmit.disabled = false;
+  }
+}
+
+function updateLiveClock() {
+  const now = new Date();
+  document.getElementById('live-clock').textContent = new Intl.DateTimeFormat('ar-SA', {
+    timeZone: 'Asia/Riyadh',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(now);
+  const gregorian = new Intl.DateTimeFormat('ar-SA', {
+    timeZone: 'Asia/Riyadh',
+    dateStyle: 'medium',
+  }).format(now);
+  let hijri = '';
+  try {
+    hijri = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', {
+      timeZone: 'Asia/Riyadh',
+      dateStyle: 'medium',
+    }).format(now);
+  } catch (error) {
+    console.warn('Hijri calendar is not supported in this browser:', error);
+  }
+  document.getElementById('live-date').textContent = hijri
+    ? `${gregorian} · ${hijri}`
+    : gregorian;
+}
+
+async function updateWeather() {
+  const [latitude, longitude] = document.getElementById('weather-city').value.split(',');
+  const status = document.getElementById('weather-status');
+  status.textContent = 'جارٍ تحميل الطقس...';
+  try {
+    const query = new URLSearchParams({
+      latitude,
+      longitude,
+      current: 'temperature_2m,weather_code',
+      timezone: 'Asia/Riyadh',
+    });
+    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${query}`);
+    const data = await response.json();
+    if (!response.ok || !Number.isFinite(data?.current?.temperature_2m)) {
+      throw new Error('تعذر جلب بيانات الطقس.');
+    }
+    const city = document.getElementById('weather-city').selectedOptions[0].textContent;
+    status.textContent = `${city}: ${data.current.temperature_2m}°C`;
+  } catch (error) {
+    console.warn('Weather request failed:', error);
+    status.textContent = 'الطقس غير متاح؛ تحقق من الاتصال.';
+  }
+}
+
+function initializeAccessibilityTools() {
+  try {
+    const isLight = localStorage.getItem('aqarat-theme') === 'light';
+    document.body.classList.toggle('light-theme', isLight);
+    const themeButton = document.getElementById('theme-toggle');
+    themeButton.setAttribute('aria-pressed', String(isLight));
+    themeButton.textContent = isLight ? 'الوضع الليلي' : 'الوضع النهاري';
+  } catch (error) {
+    console.warn('Could not restore theme preference:', error);
+  }
+  document.getElementById('theme-toggle').addEventListener('click', (event) => {
+    const isLight = document.body.classList.toggle('light-theme');
+    event.currentTarget.setAttribute('aria-pressed', String(isLight));
+    event.currentTarget.textContent = isLight ? 'الوضع الليلي' : 'الوضع النهاري';
+    try {
+      localStorage.setItem('aqarat-theme', isLight ? 'light' : 'dark');
+    } catch (error) {
+      console.error('Could not save theme preference:', error);
+    }
+  });
+  document.getElementById('font-increase').addEventListener('click', () => {
+    accessibilityScale = Math.min(1.3, accessibilityScale + 0.1);
+    document.documentElement.style.setProperty('--accessibility-scale', accessibilityScale);
+  });
+  document.getElementById('font-decrease').addEventListener('click', () => {
+    accessibilityScale = Math.max(0.8, accessibilityScale - 0.1);
+    document.documentElement.style.setProperty('--accessibility-scale', accessibilityScale);
+  });
+  document.getElementById('contrast-toggle').addEventListener('click', (event) => {
+    const enabled = document.body.classList.toggle('high-contrast');
+    event.currentTarget.setAttribute('aria-pressed', String(enabled));
+  });
+  document.getElementById('speak-page').addEventListener('click', () => {
+    if (!('speechSynthesis' in window)) {
+      parserStatus.textContent = 'القراءة الصوتية غير مدعومة في هذا المتصفح.';
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const headingText = [...document.querySelectorAll('main h1, main h2')]
+      .map((heading) => heading.textContent.trim()).filter(Boolean).join('. ');
+    const utterance = new SpeechSynthesisUtterance(headingText);
+    utterance.lang = 'ar-SA';
+    window.speechSynthesis.speak(utterance);
+  });
 }
 
 const legalDrafts = Object.freeze({
@@ -573,6 +963,83 @@ async function loadPlatformInfo() {
   }
 }
 
+async function loadPartners() {
+  try {
+    const response = await fetch('/api/partners', {
+      headers: { Accept: 'application/json' },
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data?.success !== true || !Array.isArray(data.partners)) {
+      throw new Error(data?.message || `تعذر تحميل دليل الجهات (HTTP ${response.status}).`);
+    }
+
+    partnersList.replaceChildren();
+    for (const partner of data.partners) {
+      if (
+        !partner ||
+        typeof partner.name !== 'string' ||
+        typeof partner.category !== 'string' ||
+        typeof partner.desc !== 'string'
+      ) continue;
+      const card = document.createElement('article');
+      card.className = 'partner-card';
+      const category = document.createElement('span');
+      category.className = 'listing-kind-badge';
+      category.textContent = partner.category;
+      const name = document.createElement('h5');
+      name.textContent = partner.name;
+      const description = document.createElement('p');
+      description.textContent = partner.desc;
+      card.append(category, name, description);
+      if (typeof partner.phone === 'string' && partner.phone) {
+        const phone = document.createElement('p');
+        phone.textContent = `الهاتف: ${partner.phone}`;
+        card.append(phone);
+      }
+      const link = createExternalLink('الموقع الرسمي', partner.url);
+      if (link) card.append(link);
+      partnersList.append(card);
+    }
+    if (!partnersList.childElementCount) {
+      partnersList.textContent = 'لا توجد جهات متاحة حالياً.';
+    }
+  } catch (error) {
+    console.error('Partner directory request failed:', error);
+    partnersList.textContent = error instanceof TypeError
+      ? 'تعذر الاتصال بالخادم لتحميل الجهات.'
+      : error.message;
+  }
+}
+
+function calculateMortgage(event) {
+  event.preventDefault();
+  const price = Number(document.getElementById('mortgage-price').value);
+  const downPercent = Number(document.getElementById('mortgage-down').value);
+  const annualRate = Number(document.getElementById('mortgage-rate').value);
+  const years = Number(document.getElementById('mortgage-years').value);
+  if (
+    !Number.isFinite(price) || price <= 0 ||
+    !Number.isFinite(downPercent) || downPercent < 0 || downPercent >= 100 ||
+    !Number.isFinite(annualRate) || annualRate < 0 ||
+    !Number.isInteger(years) || years < 1 || years > 50
+  ) {
+    mortgageResult.textContent = 'راجع قيمة العقار والدفعة والنسبة والمدة.';
+    mortgageResult.dataset.state = 'error';
+    return;
+  }
+
+  const principal = price * (1 - downPercent / 100);
+  const months = years * 12;
+  const monthlyRate = annualRate / 1200;
+  const monthlyPayment = monthlyRate === 0
+    ? principal / months
+    : principal * monthlyRate / (1 - (1 + monthlyRate) ** -months);
+  const format = new Intl.NumberFormat('ar-SA', { maximumFractionDigits: 2 });
+  mortgageResult.textContent =
+    `القسط الشهري التقديري: ${format.format(monthlyPayment)} ريال · إجمالي الأقساط: ${format.format(monthlyPayment * months)} ريال.`;
+  mortgageResult.dataset.state = 'success';
+}
+
 async function submitMessage(event) {
   event.preventDefault();
   const messageText = chatInput.value.trim();
@@ -668,8 +1135,51 @@ listingKind.addEventListener('change', updateListingCategories);
 listingCategory.addEventListener('change', updateCustomCategoryVisibility);
 listingForm.addEventListener('submit', submitListing);
 refreshListingsButton.addEventListener('click', loadLedgerListings);
-updateListingCategories();
-updateEstimate();
-checkApiHealth();
+loadPartners();
 loadPlatformInfo();
 loadLedgerListings();
+checkApiHealth();
+document.getElementById('analyze-listing').addEventListener('click', analyzeListingText);
+careerForm.addEventListener('submit', submitCareerApplication);
+listingContactPhone.addEventListener('input', () => {
+  const hasPhone = listingContactPhone.value.trim().length > 0;
+  listingContactConsent.required = hasPhone;
+  if (!hasPhone) listingContactConsent.checked = false;
+});
+marketSort.addEventListener('change', renderLedgerListings);
+mortgageForm.addEventListener('submit', calculateMortgage);
+document.querySelectorAll('[data-market-filter]').forEach((button) => {
+  button.addEventListener('click', () => {
+    selectedMarketFilter = button.dataset.marketFilter;
+    document.querySelectorAll('[data-market-filter]').forEach((tab) => {
+      tab.classList.toggle('is-active', tab === button);
+      tab.setAttribute('aria-pressed', String(tab === button));
+    });
+    renderLedgerListings();
+  });
+});
+mediaInput.addEventListener('change', () => showMediaPreview(mediaInput.files));
+mediaDropZone.addEventListener('dragover', (event) => {
+  event.preventDefault();
+  mediaDropZone.classList.add('is-dragging');
+});
+mediaDropZone.addEventListener('dragleave', (event) => {
+  if (!mediaDropZone.contains(event.relatedTarget)) {
+    mediaDropZone.classList.remove('is-dragging');
+  }
+});
+mediaDropZone.addEventListener('drop', (event) => {
+  event.preventDefault();
+  mediaDropZone.classList.remove('is-dragging');
+  showMediaPreview(event.dataTransfer.files);
+});
+document.getElementById('weather-city').addEventListener('change', updateWeather);
+document.getElementById('offer-ticker').addEventListener('click', (event) => {
+  event.currentTarget.classList.toggle('is-paused');
+});
+initializeAccessibilityTools();
+updateLiveClock();
+window.setInterval(updateLiveClock, 1000);
+updateWeather();
+updateListingCategories();
+updateEstimate();

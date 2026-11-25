@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#090D16">
     <meta name="description" content="منصة العالمي للأصول والعقارات مع فحص آلي للرسائل.">
     <title>بورصة العالمي الدولية للأصول والعقارات</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -320,15 +320,140 @@
             </div>
         </header>
 
+        <section class="utility-bar" aria-label="أدوات الوقت وإمكانية الوصول">
+            <div class="live-info">
+                <span id="live-clock" aria-label="الوقت الحالي">--:--</span>
+                <span id="live-date" aria-label="التاريخ الميلادي والهجري">جارٍ تحميل التاريخ</span>
+                <label class="weather-control" for="weather-city">
+                    الطقس
+                    <select id="weather-city" aria-label="اختر مدينة الطقس">
+                        <option value="24.7136,46.6753">الرياض</option>
+                        <option value="21.4858,39.1925">جدة</option>
+                        <option value="26.4207,50.0888">الدمام</option>
+                        <option value="21.3891,39.8579">مكة المكرمة</option>
+                        <option value="24.5247,39.5692">المدينة المنورة</option>
+                    </select>
+                </label>
+                <span id="weather-status" role="status">الطقس غير متاح بعد</span>
+            </div>
+            <div class="accessibility-tools" aria-label="إمكانية الوصول">
+                <button class="tool-button" id="font-decrease" type="button" aria-label="تصغير الخط">A−</button>
+                <button class="tool-button" id="font-increase" type="button" aria-label="تكبير الخط">A+</button>
+                <button class="tool-button" id="contrast-toggle" type="button" aria-pressed="false">تباين عالٍ</button>
+                <button class="tool-button" id="speak-page" type="button">قراءة الصفحة</button>
+                <button class="tool-button" id="theme-toggle" type="button" aria-pressed="false">الوضع النهاري</button>
+            </div>
+        </section>
+
+        <nav class="home-nav" aria-label="التنقل الرئيسي">
+            <a href="#home-hub">الرئيسية</a>
+            <a href="#listing-section">إضافة إعلان</a>
+            <a href="#market-section">السوق</a>
+            <a href="#office-section">المكتب والدفتر</a>
+            <a href="#partners-section">الشركاء والتمويل</a>
+            <a href="#careers-section">الوظائف</a>
+            <a href="#contact-section">تواصل معنا</a>
+        </nav>
+
+        <section class="offer-ticker" aria-label="إعلانات المنصة">
+            <span class="ticker-label">بورصة العالمي VIP</span>
+            <div class="ticker-window" id="offer-ticker">
+                <p>منصة موحدة لاستعراض العقارات والأصول والفرص الاستثمارية. تحقّق من البيانات والأطراف قبل أي التزام.</p>
+            </div>
+        </section>
+
         <div class="legal-notice">
             ⚖️ <strong>تنبيه قانوني:</strong> المنصة وسيط تقني بين الأطراف. لا يُعد هذا التنبيه إعفاءً قانونياً شاملاً ولا بديلاً عن مراجعة العقود والالتزامات النظامية. لا تتم أي حوالة مالية من هذه الصفحة.
         </div>
 
-        <section class="section-box listing-section" aria-labelledby="listing-heading">
+        <section class="section-box home-hub" id="home-hub" aria-labelledby="home-hub-heading">
+            <p class="eyebrow">REAL ESTATE &amp; ASSET EXCHANGE</p>
+            <h2 id="home-hub-heading">بورصة العالمي الدولية للأصول والعقارات VIP</h2>
+            <p class="hero-copy">بوابة موحدة لاستكشاف الفرص العقارية والأصول، وإدارة بيانات العروض والطلبات ضمن تجربة عربية واضحة.</p>
+            <div class="hub-grid" aria-label="أبواب المنصة">
+                <a href="#listing-section"><strong>إضافة فرصة</strong><span>طلب أو إعلان أو صفقة</span></a>
+                <a href="#market-section"><strong>استعراض السوق</strong><span>فلترة العروض والطلبات</span></a>
+                <a href="#office-section"><strong>المكتب والدفتر</strong><span>السجلات والمهام</span></a>
+                <a href="#partners-section"><strong>التمويل والشركاء</strong><span>حاسبات وروابط إرشادية</span></a>
+                <a href="#careers-section"><strong>الوظائف</strong><span>التقديم للفرص المهنية</span></a>
+                <a href="#contact-section"><strong>تواصل معنا</strong><span>قنوات المنصة الرسمية</span></a>
+            </div>
+            <div class="trust-notice">
+                <strong>بيانات الاعتماد المقدمة من مشغّل المنصة:</strong>
+                سجل تجاري 1010000000 · فال 1100305757.
+                <a href="https://rega.gov.sa" target="_blank" rel="noopener noreferrer">تحقق عبر الهيئة العامة للعقار</a>.
+                لا يعني عرض البيانات تحقق المنصة منها.
+            </div>
+        </section>
+
+        <section class="section-box about-grid" aria-label="نبذة المنصة ورؤيتها">
+            <article id="about-section">
+                <h2>نبذة عنا | About Us</h2>
+                <p>منصة رقمية لعرض فرص العقارات والأصول وتسهيل الوصول إلى المعلومات المتاحة، مع إبقاء التحقق والتعاقد والقرارات المالية على عاتق الأطراف والجهات المختصة.</p>
+                <p lang="en" dir="ltr">A digital marketplace for discovering real-estate and asset opportunities. Listings are informational and require independent verification.</p>
+            </article>
+            <article>
+                <h2>الرؤية | Vision</h2>
+                <p>أن نسهّل الوصول المنظم إلى الفرص العقارية والاستثمارية، وندعم اتخاذ قرارات واعية مبنية على معلومات قابلة للتحقق.</p>
+                <p lang="en" dir="ltr">To make real-estate and investment opportunities easier to discover through clear, verifiable information.</p>
+            </article>
+            <article>
+                <h2>الهدف | Mission</h2>
+                <p>ربط أصحاب الفرص والمهتمين بها بأدوات رقمية مسؤولة، مع احترام الخصوصية والأنظمة المحلية.</p>
+                <p lang="en" dir="ltr">Our mission is to connect opportunity owners and interested parties through responsible digital tools that respect privacy and local regulations.</p>
+            </article>
+        </section>
+
+        <section class="section-box" id="careers-section" aria-labelledby="careers-heading">
+            <h2 id="careers-heading">الوظائف | Careers</h2>
+            <p class="muted">أرسل بياناتك الأساسية بموافقتك لغرض التوظيف فقط. لا ترفق مستندات هوية أو بيانات مالية.</p>
+            <form id="career-form">
+                <div class="grid-two">
+                    <div><label for="career-name">الاسم</label><input id="career-name" maxlength="150" autocomplete="name" required></div>
+                    <div><label for="career-email">البريد الإلكتروني</label><input id="career-email" type="email" maxlength="254" autocomplete="email" required></div>
+                    <div><label for="career-phone">رقم التواصل</label><input id="career-phone" type="tel" maxlength="50" autocomplete="tel" required></div>
+                    <div>
+                        <label for="career-role">مجال الاهتمام</label>
+                        <select id="career-role" required>
+                            <option value="">اختر المجال</option>
+                            <option value="technology">التقنية والمنتجات</option>
+                            <option value="real-estate">العقار والاستثمار</option>
+                            <option value="operations">العمليات وخدمة العملاء</option>
+                            <option value="other">أخرى</option>
+                        </select>
+                    </div>
+                </div>
+                <label for="career-note">نبذة مختصرة</label>
+                <textarea id="career-note" maxlength="2000" rows="4" required></textarea>
+                <label class="checkbox-label" for="career-consent">
+                    <input id="career-consent" type="checkbox" required>
+                    <span>أوافق على حفظ البيانات لغرض دراسة طلب التوظيف، وأفهم أنها لا تُرسل عبر البريد تلقائياً.</span>
+                </label>
+                <button class="primary-button" id="career-submit" type="submit">إرسال طلب التوظيف</button>
+                <p id="career-status" role="status" aria-live="polite"></p>
+            </form>
+        </section>
+
+        <section class="section-box listing-section" id="listing-section" aria-labelledby="listing-heading">
             <h2 id="listing-heading">إضافة عقار أو أصل إلى الدفتر</h2>
-            <p class="muted">اختر التصنيف والغرض، ثم احفظ الإعلان في سجل المنصة المشترك مع تطبيق الجوال.</p>
+            <p class="muted">حلّل النص لتعبئة الحقول المقروءة، ثم راجعها قبل الإرسال. لا تُرفع الوسائط إلى الخادم في الوقت الحالي.</p>
+            <label for="listing-text">المحلل الذكي للنصوص (تحليل محلي)</label>
+            <textarea id="listing-text" rows="5" maxlength="12000" placeholder="الصق نص الإعلان هنا. سيحاول المتصفح استخراج السعر والمساحة والمدينة ورابط الخريطة."></textarea>
+            <button class="secondary-button" id="analyze-listing" type="button">تحليل النص وتعبئة الحقول</button>
+            <p id="parser-status" class="muted" role="status" aria-live="polite"></p>
+            <div id="map-preview" class="map-preview" hidden></div>
             <form id="listing-form">
                 <div class="grid-two">
+                    <div>
+                        <label for="listing-path">مسار الإضافة:</label>
+                        <select id="listing-path" required>
+                            <option value="طلب عقاري/استثماري">طلب عقاري أو استثماري</option>
+                            <option value="إعلان عقاري/أصل">إعلان عقاري أو أصل</option>
+                            <option value="مالك أرض قابلة للتطوير">مالك أرض قابلة للتطوير</option>
+                            <option value="فرصة عقارية للدفتر">فرصة عقارية للدفتر</option>
+                            <option value="صفقة عقارية مميزة">صفقة عقارية مميزة</option>
+                        </select>
+                    </div>
                     <div>
                         <label for="listing-kind">نوع السجل:</label>
                         <select id="listing-kind" required>
@@ -373,7 +498,21 @@
                         <label for="listing-owner-type">صفة المعلن (اختياري):</label>
                         <input id="listing-owner-type" type="text" maxlength="100" placeholder="مالك، وسيط، مطور">
                     </div>
+                    <div>
+                        <label for="listing-contact-phone">رقم التواصل (اختياري):</label>
+                        <input id="listing-contact-phone" type="tel" maxlength="50" autocomplete="tel" placeholder="05xxxxxxxx">
+                    </div>
                 </div>
+                <label class="checkbox-label" for="listing-contact-consent">
+                    <input id="listing-contact-consent" type="checkbox">
+                    <span>أوافق على حفظ رقم التواصل مع السجل في قاعدة البيانات؛ لن يظهر للعامة قبل توفير تسجيل دخول وصلاحيات مناسبة.</span>
+                </label>
+                <label class="drop-zone" id="media-drop-zone" for="listing-media">
+                    <strong>اسحب الصور أو الفيديو إلى هنا أو اختر ملفات</strong>
+                    <span>معاينة محلية فقط؛ التخزين السحابي غير مهيأ.</span>
+                    <input id="listing-media" type="file" accept="image/*,video/*" multiple capture="environment">
+                </label>
+                <div id="media-preview" class="media-preview" aria-live="polite"></div>
                 <button class="primary-button" id="listing-submit" type="submit">حفظ في الدفتر</button>
                 <p id="listing-status" class="listing-status" role="status" aria-live="polite"></p>
             </form>
@@ -381,12 +520,33 @@
                 <h3>الإعلانات المسجلة</h3>
                 <button class="secondary-button" id="refresh-listings" type="button">تحديث</button>
             </div>
+            <div class="market-controls">
+                <div class="market-tabs" role="group" aria-label="تصنيف السوق">
+                    <button class="market-tab is-active" data-market-filter="all" type="button">الكل</button>
+                    <button class="market-tab" data-market-filter="request" type="button">الطلبات</button>
+                    <button class="market-tab" data-market-filter="listing" type="button">الإعلانات</button>
+                    <button class="market-tab" data-market-filter="owner" type="button">الملاك</button>
+                    <button class="market-tab" data-market-filter="opportunity" type="button">الفرص</button>
+                    <button class="market-tab" data-market-filter="featured" type="button">المميزة</button>
+                    <button class="market-tab" data-market-filter="favorites" type="button">المفضلة</button>
+                </div>
+                <label for="listing-sort">ترتيب النتائج</label>
+                <select id="listing-sort">
+                    <option value="newest">الأحدث</option>
+                    <option value="oldest">الأقدم</option>
+                    <option value="serious">الأكثر جدية</option>
+                    <option value="price-desc">الأعلى سعراً</option>
+                    <option value="price-asc">الأقل سعراً</option>
+                    <option value="area-desc">الأكبر مساحة</option>
+                    <option value="interactions-desc">الأكثر تفاعلاً</option>
+                </select>
+            </div>
             <div id="listing-results" class="listing-results" aria-live="polite">
                 <p class="muted">جارٍ تحميل السجلات...</p>
             </div>
         </section>
 
-        <section class="section-box" aria-labelledby="market-heading">
+        <section class="section-box" id="market-section" aria-labelledby="market-heading">
             <h2 id="market-heading">🛒 بورصة تجارة الأصول المتعددة</h2>
             <div class="locked-badge">
                 🔒 حماية الخصوصية: لا تعرض هذه الصفحة أرقام التواصل. يلزم تنفيذ التحقق والصلاحيات على الخادم قبل إتاحة أي بيانات خاصة.
@@ -500,7 +660,7 @@
             <p class="footnote">الرصد لا يحظر الرسائل تلقائياً. تنبيهات المطور تصل فقط إلى جلسة مطور موثّقة ومتّصلة.</p>
         </section>
 
-        <div class="grid-two">
+        <div class="grid-two" id="office-section">
             <section class="section-box" aria-labelledby="brokers-heading">
                 <h3 id="brokers-heading">🎖️ الوسطاء والسعاة</h3>
                 <p class="status-green">✓ تصنيف الوسطاء المعتمدين</p>
@@ -508,15 +668,32 @@
                 <p class="feature-unavailable">لا تتوفر حالياً خدمة تحقق من الاعتماد أو إنشاء الاجتماعات في الخادم.</p>
                 <button class="secondary-button" type="button" disabled title="الخدمة غير متصلة بالخادم">إنشاء اجتماع — غير متاح حالياً</button>
             </section>
-            <section class="section-box" aria-labelledby="finance-heading">
+            <section class="section-box" id="partners-section" aria-labelledby="finance-heading">
                 <h3 id="finance-heading">🏦 الجهات التمويلية والعقود</h3>
                 <p class="muted">تأكد من مراجعة الجهة المختصة ومسودة العقد قبل مشاركة أي مستندات أو بيانات مالية.</p>
+                <h4>دليل الجهات والشركاء</h4>
+                <p class="footnote">روابط ومعلومات تعريفية فقط؛ لا تمثل اعتماداً أو شراكة رسمية.</p>
+                <div id="partners-list" class="partner-list" role="status" aria-live="polite">
+                    <p class="muted">جارٍ تحميل الجهات...</p>
+                </div>
+                <h4>حاسبة تمويل تقديرية</h4>
+                <form id="mortgage-form">
+                    <div class="grid-two">
+                        <div><label for="mortgage-price">قيمة التمويل المطلوبة (ريال)</label><input id="mortgage-price" type="number" min="1" step="any" required></div>
+                        <div><label for="mortgage-down">الدفعة الأولى (%)</label><input id="mortgage-down" type="number" min="0" max="99.99" step="0.1" value="20" required></div>
+                        <div><label for="mortgage-rate">معدل سنوي افتراضي (%)</label><input id="mortgage-rate" type="number" min="0" max="100" step="0.01" value="5" required></div>
+                        <div><label for="mortgage-years">المدة (سنوات)</label><input id="mortgage-years" type="number" min="1" max="50" step="1" value="25" required></div>
+                    </div>
+                    <button class="secondary-button" type="submit">احسب القسط التقديري</button>
+                    <p id="mortgage-result" role="status" aria-live="polite"></p>
+                    <p class="footnote">حساب توضيحي لا يمثل عرضاً ائتمانياً؛ تختلف النتيجة بحسب شروط البنك والرسوم والتأمين.</p>
+                </form>
                 <p class="feature-unavailable">لا تتوفر حالياً خدمة إرسال مستندات أو معالجة مدفوعات في الخادم.</p>
                 <button class="secondary-button" type="button" disabled title="الخدمة غير متصلة بالخادم">إرسال المستندات — غير متاح حالياً</button>
             </section>
         </div>
 
-        <section class="section-box" aria-labelledby="platform-info-heading">
+        <section class="section-box" id="contact-section" aria-labelledby="platform-info-heading">
             <h2 id="platform-info-heading">🏦 بيانات الحسابات وقنوات التواصل</h2>
             <p class="compliance-note platform-info-notice">
                 البيانات المعروضة معلومات مقدمة من مشغّل المنصة وليست توثيقاً للحساب أو اعتماداً له. تحقق من هوية المستفيد وتفاصيل الدفع عبر قناة مستقلة قبل أي تحويل. الموقع لا يعالج المدفوعات.

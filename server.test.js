@@ -39,6 +39,16 @@ test('website assets use same-origin CSP with an allowlisted Cairo font', async 
   assert.match(page, /id="contract-modal"/);
   assert.match(page, /id="accept-contract"/);
   assert.match(page, /id="listing-form"/);
+  assert.match(page, /id="home-hub"/);
+  assert.match(page, /id="live-clock"/);
+  assert.match(page, /id="weather-city"/);
+  assert.match(page, /id="contrast-toggle"/);
+  assert.match(page, /id="career-form"/);
+  assert.match(page, /id="listing-text"/);
+  assert.match(page, /id="media-drop-zone"/);
+  assert.match(page, /id="partners-list"/);
+  assert.match(page, /id="mortgage-form"/);
+  assert.match(page, /data-market-filter="favorites"/);
   assert.match(page, /value="استثمار"/);
   assert.match(page, /id="listing-results"/);
   assert.match(page, /id="bank-accounts-view"/);
@@ -49,6 +59,8 @@ test('website assets use same-origin CSP with an allowlisted Cairo font', async 
   assert.ok(contentSecurityPolicy?.includes("script-src 'self'"));
   assert.ok(contentSecurityPolicy?.includes('https://fonts.googleapis.com'));
   assert.ok(contentSecurityPolicy?.includes('https://fonts.gstatic.com'));
+  assert.ok(contentSecurityPolicy?.includes('https://api.open-meteo.com'));
+  assert.ok(contentSecurityPolicy?.includes('blob:'));
   assert.equal(scriptResponse.status, 200);
   assert.equal(stylesResponse.status, 200);
   assert.match(styles, /#090d16/i);
@@ -60,6 +72,11 @@ test('website assets use same-origin CSP with an allowlisted Cairo font', async 
   assert.match(script, /contractModal\.addEventListener/);
   assert.match(script, /\/api\/platform\/info/);
   assert.match(script, /function loadPlatformInfo/);
+  assert.match(script, /function analyzeListingText/);
+  assert.match(script, /function updateLiveClock/);
+  assert.match(script, /function calculateMortgage/);
+  assert.match(script, /function loadPartners/);
+  assert.match(script, /\/api\/careers\/apply/);
   assert.match(script, /createTextNode/);
   assert.doesNotMatch(script, /\.innerHTML\s*=/);
   assert.doesNotMatch(script, /x-compliance-bypass-token/i);
@@ -73,6 +90,58 @@ test('health endpoint reports the API as available', async () => {
     success: true,
     service: 'aqarat-app-api',
   });
+});
+
+test('career applications require valid data and explicit privacy consent', async () => {
+  const invalidBodies = [
+    {
+      fullName: 'Candidate',
+      email: 'candidate@example.com',
+      phone: '+966500000000',
+      role: 'technology',
+      note: 'Experience',
+      privacyConsent: false,
+    },
+    {
+      fullName: 'Candidate',
+      email: 'not-an-email',
+      phone: '+966500000000',
+      role: 'technology',
+      note: 'Experience',
+      privacyConsent: true,
+    },
+  ];
+
+  for (const body of invalidBodies) {
+    const response = await fetch(`${baseUrl}/api/careers/apply`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).success, false);
+  }
+});
+
+test('career application reports unavailable database without claiming a save', async () => {
+  const response = await fetch(`${baseUrl}/api/careers/apply`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      fullName: 'Candidate',
+      email: 'candidate@example.com',
+      phone: '+966500000000',
+      role: 'technology',
+      note: 'Relevant experience',
+      privacyConsent: true,
+    }),
+  });
+  const data = await response.json();
+
+  assert.equal(response.status, 503);
+  assert.equal(data.success, false);
+  assert.equal(data.code, 'DATABASE_NOT_CONFIGURED');
+  assert.equal(data.emailNotificationSent, undefined);
 });
 
 test('public platform info returns empty defaults without invented financial details', async () => {
@@ -93,6 +162,17 @@ test('public platform info returns empty defaults without invented financial det
       },
     },
   });
+});
+
+test('partner directory returns informational entries without claiming affiliation', async () => {
+  const response = await fetch(`${baseUrl}/api/partners`);
+  const data = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(data.success, true);
+  assert.ok(Array.isArray(data.partners));
+  assert.ok(data.partners.some((partner) => partner.name.includes('الهيئة العامة للعقار')));
+  assert.ok(data.partners.some((partner) => partner.category === 'بنوك سعودية'));
 });
 
 test('platform settings can only be updated with the server-side admin token', async () => {
@@ -386,6 +466,23 @@ test('ledger rejects unsupported deal purposes and overlong custom categories', 
     assert.equal(response.status, 400);
     assert.equal((await response.json()).success, false);
   }
+});
+
+test('ledger does not accept a contact number without explicit privacy consent', async () => {
+  const response = await fetch(`${baseUrl}/api/ledger/add`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      itemType: 'إعلان عقاري',
+      title: 'إعلان تجريبي',
+      assetCategory: 'أراضي',
+      dealType: 'بيع',
+      contactPhone: '+966500000000',
+    }),
+  });
+
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).success, false);
 });
 
 test('assistant endpoint reports that no AI provider is configured', async () => {

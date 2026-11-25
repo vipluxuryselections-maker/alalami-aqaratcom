@@ -146,6 +146,8 @@ async function initializeSuperAppTables() {
       deal_type VARCHAR(50),
       price NUMERIC(15, 2) DEFAULT 0,
       area NUMERIC(15, 2) DEFAULT 0,
+      location VARCHAR(150),
+      owner_type VARCHAR(100),
       contact_phone VARCHAR(50),
       seriousness_score INT DEFAULT 5,
       recommendations_count INT DEFAULT 0,
@@ -183,6 +185,11 @@ async function initializeSuperAppTables() {
   await databasePool.query(
     'ALTER TABLE office_ledger ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(50)',
   );
+  await databasePool.query(`
+    ALTER TABLE office_ledger
+      ADD COLUMN IF NOT EXISTS location VARCHAR(150),
+      ADD COLUMN IF NOT EXISTS owner_type VARCHAR(100)
+  `);
   return true;
 }
 
@@ -225,7 +232,8 @@ app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       },
     },
   }),
@@ -687,7 +695,11 @@ app.get('/api/ledger', async (req, res) => {
   if (!pool) return;
   try {
     const result = await pool.query(
-      'SELECT * FROM office_ledger ORDER BY is_featured DESC, created_at DESC',
+      `SELECT id, item_type, status, title, asset_category, deal_type, price,
+         area, location, owner_type, seriousness_score, recommendations_count,
+         interactions_count, is_featured, created_at
+       FROM office_ledger
+       ORDER BY is_featured DESC, created_at DESC`,
     );
     res.json({ success: true, items: result.rows });
   } catch (error) {
@@ -705,6 +717,8 @@ app.post('/api/ledger/add', async (req, res) => {
     dealType,
     price,
     area,
+    location,
+    ownerType,
     contactPhone,
     seriousnessScore,
     isFeatured,
@@ -729,7 +743,10 @@ app.post('/api/ledger/add', async (req, res) => {
     !isNonEmptyString(itemType, 50) ||
     (status !== undefined && !isNonEmptyString(status, 50)) ||
     !optionalTextIsValid(assetCategory, 100) ||
-    !optionalTextIsValid(dealType, 50) ||
+    (dealType !== undefined &&
+      !['بيع', 'شراء', 'إيجار', 'استثمار'].includes(dealType)) ||
+    !optionalTextIsValid(location, 150) ||
+    !optionalTextIsValid(ownerType, 100) ||
     !optionalTextIsValid(coBrokerName, 100) ||
     !optionalTextIsValid(commissionSplit, 100) ||
     !optionalTextIsValid(brokersCommitment, 12000) ||
@@ -762,11 +779,11 @@ app.post('/api/ledger/add', async (req, res) => {
   try {
     const result = await pool.query(
       `INSERT INTO office_ledger (
-         item_type, status, title, asset_category, deal_type, price, area,
-         contact_phone, seriousness_score, is_featured, co_broker_name, commission_split,
+        item_type, status, title, asset_category, deal_type, price, area,
+        location, owner_type, contact_phone, seriousness_score, is_featured, co_broker_name, commission_split,
          loi_attached, buy_commitment, brokers_commitment
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
        RETURNING *`,
       [
         itemType.trim(),
@@ -776,6 +793,8 @@ app.post('/api/ledger/add', async (req, res) => {
         dealType?.trim() || null,
         price || 0,
         area || 0,
+        location?.trim() || null,
+        ownerType?.trim() || null,
         contactPhone?.trim() || null,
         seriousnessScore ?? 5,
         isFeatured === true,

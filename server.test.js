@@ -3,7 +3,8 @@
 const { after, before, test } = require('node:test');
 const assert = require('node:assert/strict');
 process.env.COMPLIANCE_BYPASS_TOKEN = 'test-compliance-bypass-token';
-const { app } = require('./server');
+process.env.PLATFORM_ADMIN_TOKEN = 'test-platform-admin-token';
+const { app, createFlexibleDeal } = require('./server');
 
 let server;
 let baseUrl;
@@ -20,11 +21,13 @@ after(async () => {
   });
 });
 
-test('website and external client script are served with same-origin CSP', async () => {
+test('website assets use same-origin CSP with an allowlisted Cairo font', async () => {
   const pageResponse = await fetch(`${baseUrl}/`);
   const page = await pageResponse.text();
   const scriptResponse = await fetch(`${baseUrl}/app.js`);
   const script = await scriptResponse.text();
+  const stylesResponse = await fetch(`${baseUrl}/style.css`);
+  const styles = await stylesResponse.text();
   const contentSecurityPolicy = pageResponse.headers.get('content-security-policy');
 
   assert.equal(pageResponse.status, 200);
@@ -35,14 +38,30 @@ test('website and external client script are served with same-origin CSP', async
   assert.match(page, /id="developer-bypass-checkbox" disabled/);
   assert.match(page, /id="contract-modal"/);
   assert.match(page, /id="accept-contract"/);
+  assert.match(page, /id="listing-form"/);
+  assert.match(page, /value="استثمار"/);
+  assert.match(page, /id="listing-results"/);
+  assert.match(page, /id="bank-accounts-view"/);
+  assert.match(page, /id="contacts-view"/);
+  assert.match(page, /تحقق من هوية المستفيد وتفاصيل الدفع/);
   assert.doesNotMatch(page, /onclick=/i);
   assert.doesNotMatch(page, /<script>[\s\S]*<\/script>/);
   assert.ok(contentSecurityPolicy?.includes("script-src 'self'"));
+  assert.ok(contentSecurityPolicy?.includes('https://fonts.googleapis.com'));
+  assert.ok(contentSecurityPolicy?.includes('https://fonts.gstatic.com'));
   assert.equal(scriptResponse.status, 200);
+  assert.equal(stylesResponse.status, 200);
+  assert.match(styles, /#090d16/i);
+  assert.match(script, /بضائع مستوردة/);
+  assert.match(script, /\/api\/ledger\/add/);
   assert.match(script, /\/api\/ai\/monitor-chat/);
   assert.match(script, /\/api\/compliance\/validate-deal-flexible/);
   assert.match(script, /draftAcknowledged: true/);
   assert.match(script, /contractModal\.addEventListener/);
+  assert.match(script, /\/api\/platform\/info/);
+  assert.match(script, /function loadPlatformInfo/);
+  assert.match(script, /createTextNode/);
+  assert.doesNotMatch(script, /\.innerHTML\s*=/);
   assert.doesNotMatch(script, /x-compliance-bypass-token/i);
 });
 
@@ -54,6 +73,167 @@ test('health endpoint reports the API as available', async () => {
     success: true,
     service: 'aqarat-app-api',
   });
+});
+
+test('public platform info returns empty defaults without invented financial details', async () => {
+  const response = await fetch(`${baseUrl}/api/platform/info`);
+  const data = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(data, {
+    success: true,
+    settings: {
+      bankAccounts: [],
+      contactNumbers: [],
+      socialMedia: {
+        twitter: '',
+        tiktok: '',
+        instagram: '',
+        email: '',
+      },
+    },
+  });
+});
+
+test('platform settings can only be updated with the server-side admin token', async () => {
+  const response = await fetch(`${baseUrl}/api/admin/update-settings`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      secretAdminToken: 'test-platform-admin-token',
+      newSettings: { contactNumbers: [] },
+    }),
+  });
+
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).success, false);
+});
+
+test('authorized platform settings updates validate fields and are publicly readable', async () => {
+  const response = await fetch(`${baseUrl}/api/admin/update-settings`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-platform-admin-token': 'test-platform-admin-token',
+    },
+    body: JSON.stringify({
+      newSettings: {
+        bankAccounts: [],
+        contactNumbers: [
+          { title: 'Support', value: '+966500000000' },
+        ],
+        socialMedia: {
+          twitter: 'https://x.example',
+          email: 'support@example.com',
+        },
+      },
+    }),
+  });
+  const updateData = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(updateData.success, true);
+  assert.match(updateData.message, /لن تبقى بعد إعادة تشغيله/);
+
+  const infoResponse = await fetch(`${baseUrl}/api/platform/info`);
+  const infoData = await infoResponse.json();
+  assert.deepEqual(infoData.settings.contactNumbers, [
+    { title: 'Support', value: '+966500000000' },
+  ]);
+  assert.equal(infoData.settings.socialMedia.twitter, 'https://x.example');
+  assert.equal(infoData.settings.socialMedia.email, 'support@example.com');
+
+  const clearResponse = await fetch(`${baseUrl}/api/admin/update-settings`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-platform-admin-token': 'test-platform-admin-token',
+    },
+    body: JSON.stringify({
+      newSettings: {
+        contactNumbers: [],
+        socialMedia: { twitter: '', email: '' },
+      },
+    }),
+  });
+  assert.equal(clearResponse.status, 200);
+});
+
+test('platform settings reject malformed bank, contact, and social data', async () => {
+  for (const newSettings of [
+    {
+      bankAccounts: [
+        {
+          bankName: 'Test bank',
+          accountName: 'Test account',
+          iban: 'SA6210000000000000000000',
+        },
+      ],
+    },
+    {
+      contactNumbers: [
+        { title: 'Support', value: '+966500000000', secret: 'unexpected' },
+      ],
+    },
+    { socialMedia: { twitter: 'http://insecure.example' } },
+    { adminToken: 'unexpected' },
+  ]) {
+    const response = await fetch(`${baseUrl}/api/admin/update-settings`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-platform-admin-token': 'test-platform-admin-token',
+      },
+      body: JSON.stringify({ newSettings }),
+    });
+
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).success, false);
+  }
+});
+
+test('regulatory action endpoint previews all five options without claiming integration', async () => {
+  for (const chosenAction of ['Sell', 'Rent', 'Mortgage', 'Develop', 'Invest']) {
+    const response = await fetch(`${baseUrl}/api/regulatory/mega-connect`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        nationalId: '1234567890',
+        propertyDeedNumber: 'DEED-TEST',
+        chosenAction,
+      }),
+    });
+    const data = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(data.previewOnly, true);
+    assert.equal(data.submittedToAuthorities, false);
+    assert.equal(data.deedVerified, false);
+    assert.equal(data.currentAction, chosenAction);
+    assert.equal(data.systemStatus, 'Not_Submitted');
+    assert.equal(data.nationalId, undefined);
+  }
+});
+
+test('regulatory action endpoint rejects malformed identity, deed, and action values', async () => {
+  for (const body of [
+    { nationalId: '123', propertyDeedNumber: 'DEED-TEST', chosenAction: 'Sell' },
+    { nationalId: '1234567890', propertyDeedNumber: '', chosenAction: 'Sell' },
+    {
+      nationalId: '1234567890',
+      propertyDeedNumber: 'DEED-TEST',
+      chosenAction: 'toString',
+    },
+  ]) {
+    const response = await fetch(`${baseUrl}/api/regulatory/mega-connect`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).success, false);
+  }
 });
 
 test('subscription request does not claim activation before payment is integrated', async () => {
@@ -81,6 +261,20 @@ test('subscription route rejects unknown plans', async () => {
 });
 
 test('flexible deal uses the asset rate and divides broker shares exactly', async () => {
+  const deal = createFlexibleDeal({
+    assetType: 'realestate_sale',
+    price: '1000000',
+    brokerIds: ['broker_1', 'broker_2'],
+  });
+  assert.equal(deal.saeiAmount, 10000);
+  assert.equal(deal.platformShare, 5000);
+  assert.deepEqual(deal.brokerShares, [
+    { brokerId: 'broker_1', amount: 2500 },
+    { brokerId: 'broker_2', amount: 2500 },
+  ]);
+  assert.equal(deal.status, 'awaiting_payment');
+  assert.equal(deal.payoutsExecuted, false);
+
   const response = await fetch(`${baseUrl}/api/deals/create-flexible`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -92,18 +286,21 @@ test('flexible deal uses the asset rate and divides broker shares exactly', asyn
   });
   const data = await response.json();
 
-  assert.equal(response.status, 201);
-  assert.equal(data.saeiAmount, 10000);
-  assert.equal(data.platformShare, 5000);
-  assert.deepEqual(data.brokerShares, [
-    { brokerId: 'broker_1', amount: 2500 },
-    { brokerId: 'broker_2', amount: 2500 },
-  ]);
-  assert.equal(data.status, 'awaiting_payment');
-  assert.equal(data.payoutsExecuted, false);
+  assert.equal(response.status, 503);
+  assert.equal(data.code, 'DATABASE_NOT_CONFIGURED');
 });
 
 test('flexible deal supports a custom saei and reports unassigned broker share', async () => {
+  const deal = createFlexibleDeal({
+    assetType: 'gold',
+    price: 1000,
+    customSaeiAmount: '80.25',
+    brokerIds: [],
+  });
+  assert.equal(deal.saeiAmount, 80.25);
+  assert.equal(deal.platformShare, 40.13);
+  assert.equal(deal.unassignedBrokerShare, 40.12);
+
   const response = await fetch(`${baseUrl}/api/deals/create-flexible`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -116,10 +313,8 @@ test('flexible deal supports a custom saei and reports unassigned broker share',
   });
   const data = await response.json();
 
-  assert.equal(response.status, 201);
-  assert.equal(data.saeiAmount, 80.25);
-  assert.equal(data.platformShare, 40.13);
-  assert.equal(data.unassignedBrokerShare, 40.12);
+  assert.equal(response.status, 503);
+  assert.equal(data.code, 'DATABASE_NOT_CONFIGURED');
 });
 
 test('flexible deal rejects invalid asset types and broker lists', async () => {
@@ -134,6 +329,75 @@ test('flexible deal rejects invalid asset types and broker lists', async () => {
   });
 
   assert.equal(response.status, 400);
+});
+
+test('office profile refuses to report success without a configured database', async () => {
+  const response = await fetch(`${baseUrl}/api/office/profile`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ fullName: 'Test', phone: '+966500000000' }),
+  });
+  const data = await response.json();
+
+  assert.equal(response.status, 503);
+  assert.equal(data.success, false);
+  assert.equal(data.code, 'DATABASE_NOT_CONFIGURED');
+});
+
+test('ledger accepts custom commercial categories and supported deal purposes', async () => {
+  const response = await fetch(`${baseUrl}/api/ledger/add`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      itemType: 'إعلان عقاري',
+      title: 'مقر شركة تجاري',
+      assetCategory: 'مقر شركة تقنية',
+      dealType: 'استثمار',
+      price: 2500000,
+      area: 1200,
+      location: 'الرياض',
+      ownerType: 'مالك',
+    }),
+  });
+  const data = await response.json();
+
+  assert.equal(response.status, 503);
+  assert.equal(data.success, false);
+  assert.equal(data.code, 'DATABASE_NOT_CONFIGURED');
+});
+
+test('ledger rejects unsupported deal purposes and overlong custom categories', async () => {
+  for (const invalidFields of [
+    { dealType: 'تداول' },
+    { assetCategory: 'x'.repeat(101) },
+  ]) {
+    const response = await fetch(`${baseUrl}/api/ledger/add`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        itemType: 'عرض أصل',
+        title: 'فرصة تجارية',
+        assetCategory: 'مستودع',
+        dealType: 'شراء',
+        ...invalidFields,
+      }),
+    });
+
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).success, false);
+  }
+});
+
+test('assistant endpoint reports that no AI provider is configured', async () => {
+  const response = await fetch(`${baseUrl}/api/ai/assistant`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ prompt: 'أريد نصيحة عقارية' }),
+  });
+  const data = await response.json();
+
+  assert.equal(response.status, 503);
+  assert.equal(data.code, 'AI_ASSISTANT_NOT_CONFIGURED');
 });
 
 test('compliance route requires license information and a chamber stamp for metals', async () => {

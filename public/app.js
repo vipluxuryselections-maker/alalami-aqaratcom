@@ -16,8 +16,20 @@ const contractText = document.getElementById('contract-text');
 const acceptContractButton = document.getElementById('accept-contract');
 const cancelContractButton = document.getElementById('cancel-contract');
 const complianceAssetType = document.getElementById('asset-type-flex');
+const bankAccountsView = document.getElementById('bank-accounts-view');
+const contactsView = document.getElementById('contacts-view');
+const listingForm = document.getElementById('listing-form');
+const listingKind = document.getElementById('listing-kind');
+const listingCategory = document.getElementById('listing-category');
+const customCategoryField = document.getElementById('custom-category-field');
+const customCategory = document.getElementById('custom-category');
+const listingSubmit = document.getElementById('listing-submit');
+const listingStatus = document.getElementById('listing-status');
+const listingResults = document.getElementById('listing-results');
+const refreshListingsButton = document.getElementById('refresh-listings');
 let pendingCompliancePayload = null;
 let modalPreviousFocus = null;
+let activeContractAsset = null;
 const rates = {
   realestate_sale: 0.01,
   realestate_rent: 0.05,
@@ -25,35 +37,250 @@ const rates = {
   gold: 0.01,
   scrap: 0.02,
 };
-
-const legalDrafts = Object.freeze({
-  realestate_sale:
-    'ملخص مراجعة لطلب وساطة عقارية للبيع.\n' +
-    'يتطلب الطلب تقديم بيانات التراخيص ذات الصلة ومراجعتها من مختص.\n' +
-    'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (1%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
-  realestate_rent:
-    'ملخص مراجعة لطلب وساطة عقارية للإيجار.\n' +
-    'يتطلب الطلب تقديم بيانات التراخيص والعقد ذي الصلة ومراجعتها من مختص.\n' +
-    'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (5%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
-  stocks:
-    'ملخص مراجعة لطلب متعلق بأسهم غير مدرجة.\n' +
-    'يتطلب الطلب التحقق من الملكية والمتطلبات التنظيمية بواسطة مختص.\n' +
-    'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (0.5%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
-  gold:
-    'ملخص مراجعة لطلب متعلق بالذهب والمعادن.\n' +
-    'يتطلب الطلب مراجعة بيانات الترخيص وشهادات المعدن وأي أختام مرفقة من مختص.\n' +
-    'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (1%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
-  scrap:
-    'ملخص مراجعة لطلب متعلق بالسكراب.\n' +
-    'يتطلب الطلب مراجعة بيانات الترخيص والتصاريح والمستندات الأمنية ذات الصلة من مختص.\n' +
-    'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (2%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
+const listingCategories = Object.freeze({
+  'real-estate': [
+    'فلل',
+    'أراضي',
+    'شقق',
+    'دور',
+    'كمباوند',
+    'أبراج',
+    'قصور',
+    'عمائر',
+    'محلات',
+    'أسواق تجارية',
+    'مولات تجارية',
+    'مكاتب إدارية',
+    'شركات',
+    'استراحات',
+    'مزارع',
+  ],
+  asset: [
+    'ذهب',
+    'فضة',
+    'نحاس',
+    'حديد',
+    'سكراب',
+    'ألمنيوم',
+    'مستودع',
+    'مصنع',
+    'بضائع مستوردة',
+  ],
 });
 
+function updateListingCategories() {
+  const categories = listingCategories[listingKind.value];
+  listingCategory.replaceChildren();
+  for (const category of categories) {
+    const option = document.createElement('option');
+    option.value = category;
+    option.textContent = category;
+    listingCategory.append(option);
+  }
+  const otherOption = document.createElement('option');
+  otherOption.value = '__other__';
+  otherOption.textContent = 'أخرى — اكتب التصنيف';
+  listingCategory.append(otherOption);
+  updateCustomCategoryVisibility();
+}
+
+function updateCustomCategoryVisibility() {
+  const isCustom = listingCategory.value === '__other__';
+  customCategoryField.hidden = !isCustom;
+  customCategory.required = isCustom;
+  if (!isCustom) {
+    customCategory.value = '';
+  }
+}
+
+async function loadLedgerListings() {
+  try {
+    const response = await fetch('/api/ledger', {
+      headers: { Accept: 'application/json' },
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data?.success !== true || !Array.isArray(data.items)) {
+      throw new Error(
+        data?.message || `تعذر تحميل السجلات (HTTP ${response.status}).`,
+      );
+    }
+
+    listingResults.replaceChildren();
+    if (data.items.length === 0) {
+      const emptyState = document.createElement('p');
+      emptyState.className = 'muted';
+      emptyState.textContent = 'لا توجد إعلانات مسجلة بعد.';
+      listingResults.append(emptyState);
+      return;
+    }
+
+    const formatPrice = new Intl.NumberFormat('ar-SA', {
+      maximumFractionDigits: 2,
+    });
+    for (const item of data.items) {
+      const card = document.createElement('article');
+      card.className = 'listing-card';
+      const badge = document.createElement('span');
+      badge.className = 'listing-kind-badge';
+      badge.textContent = [
+        item.asset_category || 'تصنيف غير محدد',
+        item.deal_type || 'غرض غير محدد',
+      ].join(' • ');
+      const title = document.createElement('h4');
+      title.textContent = item.title || 'إعلان بدون عنوان';
+      const location = document.createElement('p');
+      location.textContent = `الموقع: ${item.location || 'غير محدد'}`;
+      const price = document.createElement('p');
+      price.textContent = `السعر: ${formatPrice.format(Number(item.price) || 0)} ريال`;
+      const area = document.createElement('p');
+      area.textContent = `المساحة: ${formatPrice.format(Number(item.area) || 0)} م²`;
+      card.append(badge, title, location, price, area);
+      listingResults.append(card);
+    }
+  } catch (error) {
+    console.error('Ledger listing request failed:', error);
+    const errorMessage = document.createElement('p');
+    errorMessage.className = 'listing-status';
+    errorMessage.dataset.state = 'error';
+    errorMessage.textContent =
+      error instanceof TypeError
+        ? 'تعذر الاتصال بالخادم؛ لم يتم تحميل سجلات محلية بديلة.'
+        : error.message;
+    listingResults.replaceChildren(errorMessage);
+  }
+}
+
+async function submitListing(event) {
+  event.preventDefault();
+  if (listingSubmit.disabled) return;
+
+  const category = listingCategory.value === '__other__'
+    ? customCategory.value.trim()
+    : listingCategory.value;
+  if (!category) {
+    listingStatus.textContent = 'أدخل التصنيف المخصص قبل الحفظ.';
+    listingStatus.dataset.state = 'error';
+    return;
+  }
+
+  listingSubmit.disabled = true;
+  listingStatus.textContent = 'جارٍ حفظ الإعلان في قاعدة البيانات...';
+  listingStatus.dataset.state = 'pending';
+  try {
+    const response = await fetch('/api/ledger/add', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        itemType: listingKind.value === 'real-estate' ? 'إعلان عقاري' : 'عرض أصل',
+        status: 'جديد',
+        title: document.getElementById('listing-title').value.trim(),
+        assetCategory: category,
+        dealType: document.getElementById('listing-deal-type').value,
+        price: Number(document.getElementById('listing-price').value),
+        area: Number(document.getElementById('listing-area').value || 0),
+        location: document.getElementById('listing-location').value.trim(),
+        ownerType: document.getElementById('listing-owner-type').value.trim(),
+      }),
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data?.success !== true) {
+      throw new Error(
+        data?.message || `تعذر حفظ الإعلان (HTTP ${response.status}).`,
+      );
+    }
+    listingStatus.textContent = data.message || 'تم حفظ الإعلان.';
+    listingStatus.dataset.state = 'success';
+    listingForm.reset();
+    updateListingCategories();
+    await loadLedgerListings();
+  } catch (error) {
+    console.error('Ledger listing save failed:', error);
+    listingStatus.textContent =
+      error instanceof TypeError
+        ? 'تعذر الاتصال بالخادم؛ لم يتم حفظ الإعلان.'
+        : error.message;
+    listingStatus.dataset.state = 'error';
+  } finally {
+    listingSubmit.disabled = false;
+  }
+}
+
+const legalDrafts = Object.freeze({
+  realestate_sale: Object.freeze({
+    ar:
+      'ملخص مراجعة لطلب وساطة عقارية للبيع.\n' +
+      'يتطلب الطلب تقديم بيانات التراخيص ذات الصلة ومراجعتها من مختص.\n' +
+      'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (1%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
+    en:
+      'Review summary for a real estate sale brokerage request.\n' +
+      'Relevant license details must be provided and reviewed by a qualified professional.\n' +
+      'The displayed brokerage fee is an estimate based on the app setting (1%); it is not a binding agreement or a payment.',
+  }),
+  realestate_rent: Object.freeze({
+    ar:
+      'ملخص مراجعة لطلب وساطة عقارية للإيجار.\n' +
+      'يتطلب الطلب تقديم بيانات التراخيص والعقد ذي الصلة ومراجعتها من مختص.\n' +
+      'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (5%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
+    en:
+      'Review summary for a real estate rental brokerage request.\n' +
+      'Relevant license and contract details must be provided and reviewed by a qualified professional.\n' +
+      'The displayed brokerage fee is an estimate based on the app setting (5%); it is not a binding agreement or a payment.',
+  }),
+  stocks: Object.freeze({
+    ar:
+      'ملخص مراجعة لطلب متعلق بأسهم غير مدرجة.\n' +
+      'يتطلب الطلب التحقق من الملكية والمتطلبات التنظيمية بواسطة مختص.\n' +
+      'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (0.5%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
+    en:
+      'Review summary for a request concerning unlisted shares.\n' +
+      'Ownership and applicable regulatory requirements must be reviewed by a qualified professional.\n' +
+      'The displayed brokerage fee is an estimate based on the app setting (0.5%); it is not a binding agreement or a payment.',
+  }),
+  gold: Object.freeze({
+    ar:
+      'ملخص مراجعة لطلب متعلق بالذهب والمعادن.\n' +
+      'يتطلب الطلب مراجعة بيانات الترخيص وشهادات المعدن وأي أختام مرفقة من مختص.\n' +
+      'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (1%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
+    en:
+      'Review summary for a request concerning gold and other metals.\n' +
+      'License details, metal certificates, and any supplied stamps must be reviewed by a qualified professional.\n' +
+      'The displayed brokerage fee is an estimate based on the app setting (1%); it is not a binding agreement or a payment.',
+  }),
+  scrap: Object.freeze({
+    ar:
+      'ملخص مراجعة لطلب متعلق بالسكراب.\n' +
+      'يتطلب الطلب مراجعة بيانات الترخيص والتصاريح والمستندات الأمنية ذات الصلة من مختص.\n' +
+      'نسبة السعي المعروضة تقديرية وفق إعداد التطبيق (2%)، ولا تمثل اتفاقاً ملزماً أو تحصيلاً.',
+    en:
+      'Review summary for a request concerning scrap materials.\n' +
+      'License details, permits, and relevant security documents must be reviewed by a qualified professional.\n' +
+      'The displayed brokerage fee is an estimate based on the app setting (2%); it is not a binding agreement or a payment.',
+  }),
+});
+
+function getCurrentLanguage() {
+  return document.documentElement.lang.toLowerCase().startsWith('en')
+    ? 'en'
+    : 'ar';
+}
+
+function renderContractDraft() {
+  const language = getCurrentLanguage();
+  const defaultDraft = language === 'en'
+    ? 'Informational request summary.\n' +
+      'Information and requirements are subject to independent review. This page does not create a contract or obligation.'
+    : 'ملخص معلوماتي للطلب.\n' +
+      'تخضع البيانات والمتطلبات لمراجعة مستقلة، ولا تنشئ هذه الصفحة عقداً أو التزاماً.';
+  contractText.textContent =
+    legalDrafts[activeContractAsset]?.[language] || defaultDraft;
+}
+
 function openContractModal(asset) {
-  const defaultDraft =
-    'ملخص معلوماتي للطلب.\n' +
-    'تخضع البيانات والمتطلبات لمراجعة مستقلة، ولا تنشئ هذه الصفحة عقداً أو التزاماً.';
-  contractText.textContent = legalDrafts[asset] || defaultDraft;
+  activeContractAsset = asset;
+  renderContractDraft();
   modalPreviousFocus = document.activeElement;
   contractModal.hidden = false;
   acceptContractButton.focus();
@@ -64,6 +291,7 @@ function closeContractModal(discardRequest = true) {
   if (discardRequest) {
     pendingCompliancePayload = null;
   }
+  activeContractAsset = null;
   if (modalPreviousFocus instanceof HTMLElement) {
     modalPreviousFocus.focus();
   }
@@ -215,6 +443,136 @@ async function checkApiHealth() {
   }
 }
 
+function addInfoEntry(container, values) {
+  const entry = document.createElement('div');
+  entry.className = 'platform-info-entry';
+  for (const [label, value] of values) {
+    const line = document.createElement('p');
+    const labelElement = document.createElement('strong');
+    labelElement.textContent = `${label}: `;
+    line.append(labelElement, document.createTextNode(value));
+    entry.append(line);
+  }
+  container.append(entry);
+}
+
+function createExternalLink(label, href) {
+  if (typeof href !== 'string' || !href) {
+    return null;
+  }
+
+  let url;
+  try {
+    url = new URL(href);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:') {
+    return null;
+  }
+
+  const link = document.createElement('a');
+  link.href = url.href;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = label;
+  return link;
+}
+
+async function loadPlatformInfo() {
+  try {
+    const response = await fetch('/api/platform/info', {
+      headers: { Accept: 'application/json' },
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data?.success !== true || !data.settings) {
+      throw new Error(
+        data?.message || `تعذر تحميل بيانات المنصة (HTTP ${response.status}).`,
+      );
+    }
+
+    const { bankAccounts, contactNumbers, socialMedia } = data.settings;
+    if (!Array.isArray(bankAccounts) || !Array.isArray(contactNumbers)) {
+      throw new Error('أعاد الخادم بيانات حسابات أو تواصل بتنسيق غير صالح.');
+    }
+
+    bankAccountsView.replaceChildren();
+    const validBankAccounts = bankAccounts.filter(
+      (account) =>
+        account &&
+        typeof account.bankName === 'string' &&
+        typeof account.accountName === 'string' &&
+        typeof account.iban === 'string',
+    );
+    if (validBankAccounts.length === 0) {
+      const emptyState = document.createElement('p');
+      emptyState.className = 'platform-info-status';
+      emptyState.textContent = 'لا توجد بيانات حسابات بنكية متاحة حالياً.';
+      bankAccountsView.append(emptyState);
+    } else {
+      for (const account of validBankAccounts) {
+        addInfoEntry(bankAccountsView, [
+          ['البنك', account.bankName],
+          ['اسم المستفيد', account.accountName],
+          ['IBAN', account.iban],
+        ]);
+      }
+    }
+
+    contactsView.replaceChildren();
+    const validContacts = contactNumbers.filter(
+      (contact) =>
+        contact &&
+        typeof contact.title === 'string' &&
+        typeof contact.value === 'string',
+    );
+    for (const contact of validContacts) {
+      addInfoEntry(contactsView, [[contact.title, contact.value]]);
+    }
+
+    const linksContainer = document.createElement('div');
+    linksContainer.className = 'platform-info-links';
+    const socialLabels = [
+      ['tiktok', 'TikTok'],
+      ['twitter', 'X'],
+      ['instagram', 'Instagram'],
+    ];
+    for (const [key, label] of socialLabels) {
+      const link = createExternalLink(label, socialMedia?.[key]);
+      if (link) {
+        linksContainer.append(link);
+      }
+    }
+    const email = socialMedia?.email;
+    if (typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      const emailLink = document.createElement('a');
+      emailLink.href = `mailto:${email}`;
+      emailLink.textContent = email;
+      linksContainer.append(emailLink);
+    }
+    if (linksContainer.childElementCount > 0) {
+      contactsView.append(linksContainer);
+    }
+    if (contactsView.childElementCount === 0) {
+      const emptyState = document.createElement('p');
+      emptyState.className = 'platform-info-status';
+      emptyState.textContent = 'لا توجد قنوات تواصل متاحة حالياً.';
+      contactsView.append(emptyState);
+    }
+  } catch (error) {
+    console.error('Platform info request failed:', error);
+    for (const container of [bankAccountsView, contactsView]) {
+      const errorMessage = document.createElement('p');
+      errorMessage.className = 'platform-info-status';
+      errorMessage.textContent =
+        error instanceof TypeError
+          ? 'تعذر الاتصال بالخادم لتحميل البيانات.'
+          : error.message;
+      container.replaceChildren(errorMessage);
+    }
+  }
+}
+
 async function submitMessage(event) {
   event.preventDefault();
   const messageText = chatInput.value.trim();
@@ -297,6 +655,21 @@ document.addEventListener('keydown', (event) => {
     closeContractModal();
   }
 });
+new MutationObserver(() => {
+  if (!contractModal.hidden && activeContractAsset) {
+    renderContractDraft();
+  }
+}).observe(document.documentElement, {
+  attributes: true,
+  attributeFilter: ['lang'],
+});
 chatForm.addEventListener('submit', submitMessage);
+listingKind.addEventListener('change', updateListingCategories);
+listingCategory.addEventListener('change', updateCustomCategoryVisibility);
+listingForm.addEventListener('submit', submitListing);
+refreshListingsButton.addEventListener('click', loadLedgerListings);
+updateListingCategories();
 updateEstimate();
 checkApiHealth();
+loadPlatformInfo();
+loadLedgerListings();

@@ -1,0 +1,134 @@
+:root {
+    color-scheme: dark;
+    --bg-color: #090d16;
+    --card-bg: #111a28;
+    --text-color: #f7f3e8;
+    --text-muted: #b7bfcc;
+    --primary: #d4af37;
+    --border-color: rgb(212 175 55 / 30%);
+}
+
+body {
+    background:
+        radial-gradient(ellipse at 12% 0, rgb(212 175 55 / 9%), transparent 38%),
+        radial-gradient(ellipse at top, #172033 0, var(--bg-color) 68%);
+    color: var(--text-color);
+    font-family: Cairo, Tahoma, "Segoe UI", sans-serif;
+}
+
+.brand-mark,
+.section-box {
+    border-color: var(--border-color);
+    background: rgb(17 26 40 / 78%);
+    box-shadow: 0 16px 38px rgb(0 0 0 / 24%);
+    backdrop-filter: blur(14px);
+}
+
+.brand-mark {
+    color: var(--primary);
+}
+
+.section-box h2,
+.listing-results-heading h3 {
+    color: #f3e5ab;
+}
+
+input:focus,
+select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgb(212 175 55 / 18%);
+}
+
+.primary-button,
+button.secondary-button {
+    background: linear-gradient(135deg, #f3e5ab, #d4af37 70%);
+    color: #17130a;
+}
+
+.primary-button:hover:not(:disabled),
+button.secondary-button:hover:not(:disabled) {
+    background: #e6c85c;
+}
+
+.listing-section {
+    border-color: rgb(212 175 55 / 45%);
+}
+
+.listing-results-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 20px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 16px;
+}
+
+.listing-results-heading h3 {
+    margin: 0;
+}
+
+.listing-results-heading button {
+    margin: 0;
+}
+
+.listing-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+    gap: 12px;
+}
+
+.listing-card {
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: rgb(9 13 22 / 65%);
+}
+
+.listing-card h4 {
+    margin: 8px 0;
+    color: #f3e5ab;
+    overflow-wrap: anywhere;
+}
+
+.listing-card p {
+    margin: 4px 0;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.listing-kind-badge {
+    display: inline-flex;
+    padding: 3px 9px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    color: #f3e5ab;
+    font-size: 12px;
+}
+
+.listing-status[data-state="error"] {
+    color: #ffaaaa;
+}
+
+.listing-status[data-state="success"] {
+    color: #7de6bd;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+@media (max-width: 640px) {
+    body {
+        padding: 16px 12px;
+    }
+
+    .section-box {
+        padding: 16px;
+    }
+
+    .listing-results-heading {
+        align-items: flex-start;
+    }
+}

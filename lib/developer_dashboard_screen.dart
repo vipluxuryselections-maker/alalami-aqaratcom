@@ -41,9 +41,9 @@ class DeveloperDashboardScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Card(
+          const Card(
             color: _cardColor,
-            child: const Padding(
+            child: Padding(
               padding: EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -85,9 +85,9 @@ class DeveloperDashboardScreen extends StatelessWidget {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          Card(
-            color: const Color(0xFF5F1717),
-            child: const ListTile(
+          const Card(
+            color: Color(0xFF5F1717),
+            child: ListTile(
               leading: Icon(Icons.warning_amber_rounded, color: Colors.white),
               title: Text('تنبيه تجريبي: رصد عبارة غير مسموح بها في محادثة'),
               subtitle: Padding(

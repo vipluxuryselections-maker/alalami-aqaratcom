@@ -45,6 +45,8 @@ test('website assets use same-origin CSP with an allowlisted Cairo font', async 
   assert.match(page, /id="listing-form"/);
   assert.match(page, /id="home-hub"/);
   assert.match(page, /id="live-clock"/);
+  assert.match(page, /<button class="secondary-button" id="broker-create-meeting" type="button">إنشاء اجتماع عبر غرفة WebRTC<\/button>/);
+  assert.doesNotMatch(page, /إنشاء اجتماع — غير متاح حالياً/);
   assert.match(page, /id="weather-city"/);
   assert.match(page, /id="weather-location-search"/);
   assert.match(page, /id="listing-location-search"/);
@@ -112,6 +114,7 @@ test('website assets use same-origin CSP with an allowlisted Cairo font', async 
   assert.match(script, /function extractMapCoordinates/);
   assert.match(script, /api\/listing-media/);
   assert.match(script, /live_signal/);
+  assert.match(script, /document\.getElementById\('broker-create-meeting'\)\.addEventListener\('click', createLiveRoom\)/);
   assert.match(script, /navigator\.contacts\.select/);
   assert.match(script, /function submitStory/);
   assert.match(script, /function submitAffiliateProduct/);

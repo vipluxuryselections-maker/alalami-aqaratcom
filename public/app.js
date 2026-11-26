@@ -2891,6 +2891,7 @@ document.getElementById('staff-login-form').addEventListener('submit', signInSta
 document.getElementById('staff-crm-form').addEventListener('submit', submitCrmFollowup);
 document.getElementById('staff-logout').addEventListener('click', signOutStaff);
 document.getElementById('live-create-room').addEventListener('click', createLiveRoom);
+document.getElementById('broker-create-meeting').addEventListener('click', createLiveRoom);
 document.getElementById('live-join-room').addEventListener('click', joinLiveRoom);
 document.getElementById('live-start-camera').addEventListener('click', startLiveCamera);
 document.getElementById('live-leave-room').addEventListener('click', leaveLiveRoom);

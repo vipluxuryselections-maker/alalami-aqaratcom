@@ -12,6 +12,7 @@ const { Pool } = require('pg');
 const { Server } = require('socket.io');
 
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const databasePool = process.env.DATABASE_URL
   ? new Pool({

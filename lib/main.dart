@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter_contacts/flutter_contacts.dart' as contacts;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -203,6 +204,106 @@ class _PlatformWebViewState extends State<PlatformWebView> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _inviteContact() async {
+    try {
+      if (Platform.isAndroid) {
+        final permission = await contacts.FlutterContacts.permissions.request(
+          contacts.PermissionType.read,
+        );
+        if (permission != contacts.PermissionStatus.granted) {
+          if (mounted) _showMessage('يلزم السماح بقراءة جهة الاتصال التي تختارها.');
+          return;
+        }
+      }
+
+      final contact = await contacts.FlutterContacts.native.showPicker(
+        properties: {contacts.ContactProperty.phone},
+      );
+      if (!mounted || contact == null) return;
+      final phone = contact.phones
+          .map((entry) => entry.number.trim())
+          .firstWhere((number) => number.isNotEmpty, orElse: () => '');
+      if (phone.isEmpty) {
+        _showMessage('جهة الاتصال المختارة لا تحتوي على رقم هاتف.');
+        return;
+      }
+
+      final invite = Uri.https(platformHost, '/');
+      final name = contact.displayName?.trim();
+      final greeting = name == null || name.isEmpty ? '' : ' $name';
+      final message =
+          'أدعوك لاكتشاف بورصة العالمي الدولية للأصول والعقارات VIP للعقارات والمنتجات والفرص الاستثمارية. تابع المنصة وحمّل التطبيق من الرابط: $invite';
+      await showModalBottomSheet<void>(
+        context: context,
+        builder: (context) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('إرسال دعوة إلى$greeting'),
+                const SizedBox(height: 12),
+                SelectableText(message),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: message));
+                    if (context.mounted) Navigator.pop(context);
+                    if (mounted) _showMessage('تم نسخ رسالة الدعوة.');
+                  },
+                  icon: const Icon(Icons.copy),
+                  label: const Text('نسخ رسالة الدعوة'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _openInviteTarget(
+                    Uri(
+                      scheme: 'sms',
+                      path: phone,
+                      queryParameters: {'body': message},
+                    ),
+                  ),
+                  icon: const Icon(Icons.sms_outlined),
+                  label: const Text('إرسال برسالة SMS'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    final digits = phone.replaceAll(RegExp(r'\D'), '');
+                    final international =
+                        digits.startsWith('0') ? '966${digits.substring(1)}' : digits;
+                    _openInviteTarget(
+                      Uri.https('wa.me', '/$international', {'text': message}),
+                    );
+                  },
+                  icon: const Icon(Icons.chat_outlined),
+                  label: const Text('فتح WhatsApp'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Contact invite failed: $error\n$stackTrace');
+      if (mounted) _showMessage('تعذر فتح جهة الاتصال أو إعداد الدعوة.');
+    }
+  }
+
+  Future<void> _openInviteTarget(Uri uri) async {
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && mounted) {
+        _showMessage('لا يوجد تطبيق مراسلة متاح؛ انسخ رسالة الدعوة بدلاً من ذلك.');
+      }
+    } catch (error, stackTrace) {
+      debugPrint('Invite target launch failed: $error\n$stackTrace');
+      if (mounted) _showMessage('تعذر فتح تطبيق المراسلة.');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope<void>(
@@ -211,6 +312,13 @@ class _PlatformWebViewState extends State<PlatformWebView> {
         if (!didPop) unawaited(_handleSystemBack());
       },
       child: Scaffold(
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _inviteContact,
+          backgroundColor: const Color(0xFFD4AF37),
+          foregroundColor: const Color(0xFF090D16),
+          icon: const Icon(Icons.person_add_alt_1),
+          label: const Text('دعوة جهة اتصال'),
+        ),
         body: SafeArea(
           top: false,
           bottom: false,

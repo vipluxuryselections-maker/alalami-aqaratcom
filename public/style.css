@@ -83,6 +83,51 @@ textarea:focus {
     padding: 2px 6px;
 }
 
+.weather-control {
+    flex-wrap: wrap;
+}
+
+.weather-control select {
+    max-width: 180px;
+}
+
+.staff-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+    gap: 10px;
+    margin-block: 12px;
+}
+
+#staff-section details {
+    margin-block: 12px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 9px;
+}
+
+#staff-section summary {
+    cursor: pointer;
+    color: #f3e5ab;
+}
+
+#staff-section fieldset {
+    margin-block: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 9px;
+}
+
+#staff-section .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#staff-section .checkbox-label input {
+    width: auto;
+    min-height: auto;
+    margin: 0;
+}
+
 .tool-button,
 .market-tab {
     min-height: 36px;
@@ -317,6 +362,57 @@ textarea:focus {
     color: #f3e5ab;
 }
 
+dialog#panorama-dialog {
+    width: min(94vw, 1000px);
+    max-width: 1000px;
+    padding: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--card-bg);
+    color: var(--text-color);
+}
+
+dialog#panorama-dialog::backdrop {
+    background: rgb(0 0 0 / 80%);
+}
+
+.panorama-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+#panorama-stage {
+    height: min(56vh, 500px);
+    overflow: hidden;
+    border-radius: 8px;
+    background: #05070b;
+    cursor: grab;
+    touch-action: pan-y;
+}
+
+#panorama-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+#panorama-stage:active {
+    cursor: grabbing;
+}
+
+#panorama-image {
+    display: block;
+    width: 200%;
+    height: 100%;
+    max-width: none;
+    object-fit: cover;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
 .market-controls {
     justify-content: space-between;
     margin: 14px 0;
@@ -538,6 +634,221 @@ button.secondary-button:hover:not(:disabled) {
     font-size: 13px;
 }
 
+.listing-media-thumb,
+.listing-card video {
+    display: block;
+    width: min(100%, 280px);
+    max-height: 180px;
+    margin-block: 8px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.stories-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.stories-heading h2 {
+    margin: 0;
+}
+
+.stories-bar {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    padding: 10px 4px 16px;
+}
+
+.story-bubble {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    width: 82px;
+    flex: 0 0 82px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+.story-bubble img,
+.story-bubble video,
+.story-placeholder {
+    width: 68px;
+    height: 68px;
+    border: 3px solid var(--primary);
+    border-radius: 50%;
+    background: var(--card-bg);
+    object-fit: cover;
+}
+
+.story-bubble span {
+    max-width: 82px;
+    overflow: hidden;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.story-viewer {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    padding: 20px;
+    border: 0;
+    background: #07090e;
+    color: #fff;
+}
+
+.story-viewer::backdrop {
+    background: #05070b;
+}
+
+.story-close {
+    position: absolute;
+    z-index: 4;
+    inset-block-start: 18px;
+    inset-inline-end: 18px;
+}
+
+.story-progress-track {
+    position: absolute;
+    z-index: 4;
+    inset-block-start: 16px;
+    inset-inline: 18px;
+    height: 3px;
+    background: rgb(255 255 255 / 40%);
+}
+
+.story-progress-track span {
+    display: block;
+    width: 0;
+    height: 100%;
+    background: white;
+}
+
+.story-content {
+    display: grid;
+    place-items: center;
+    height: calc(100% - 115px);
+    margin-top: 20px;
+}
+
+.story-content img,
+.story-content video {
+    max-width: min(100%, 520px);
+    max-height: 100%;
+    border-radius: 12px;
+    object-fit: contain;
+}
+
+.story-viewer-footer {
+    position: absolute;
+    inset-inline: 16px;
+    inset-block-end: 16px;
+}
+
+.story-viewer-footer p {
+    margin: 6px 0;
+}
+
+.story-viewer-footer .market-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+}
+
+.story-viewer-footer button {
+    flex: 0 0 auto;
+}
+
+.story-nav {
+    position: absolute;
+    inset-block-start: 45%;
+    width: 42px;
+    height: 60px;
+    border: 0;
+    background: rgb(0 0 0 / 35%);
+    color: white;
+    font-size: 34px;
+}
+
+.story-prev {
+    inset-inline-start: 4px;
+}
+
+.story-next {
+    inset-inline-end: 4px;
+}
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+    gap: 14px;
+}
+
+.product-card {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    padding: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--card-bg);
+}
+
+.product-card h3,
+.product-card p {
+    margin: 0;
+}
+
+.product-gallery {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+}
+
+.product-gallery img {
+    width: 130px;
+    height: 120px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.product-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.product-actions a,
+.product-actions button {
+    font-size: 12px;
+}
+
+#product-create-details {
+    margin-block-start: 20px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 9px;
+}
+
+.story-placeholder {
+    display: grid;
+    place-items: center;
+    font-size: 26px;
+}
+
+.light-theme .product-card {
+    background: #fffdf7;
+}
+
 .listing-kind-badge {
     display: inline-flex;
     padding: 3px 9px;
@@ -585,5 +896,9 @@ button.secondary-button:hover:not(:disabled) {
 
     .market-controls > select {
         width: 100%;
+    }
+
+    .weather-control select {
+        max-width: 100%;
     }
 }

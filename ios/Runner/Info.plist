@@ -26,6 +26,8 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>NSCameraUsageDescription</key>
 	<string>تُستخدم الكاميرا عند اختيارك تصوير أو مشاركة محتوى داخل المنصة.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>يُستخدم منتقي جهات الاتصال عند اختيارك جهة لإرسال دعوة المنصة بنفسك.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>يُستخدم الميكروفون عند اختيارك ميزة صوتية داخل المنصة.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

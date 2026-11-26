@@ -32,10 +32,15 @@ hosting platform and falls back to port `3000`.
 The API includes a health check, keyword-based chat monitoring, subscription
 plan previews, and flexible deal/saei previews. These previews do not process
 payments, activate subscriptions, lock assets, or execute payouts. Google Meet
-link creation returns `501` until Google API credentials and integration are
-configured. Realtime Socket.IO connections require `DEVELOPER_ALERT_TOKEN`;
-live-stream messages are restricted to authenticated connections that joined
-the corresponding property room.
+API link creation returns `501` until provider credentials and integration are
+configured. The website can open the external Google Meet and Zoom meeting
+pages; imo opens its website and does not create an imo call automatically.
+Developer Socket.IO alerts require `DEVELOPER_ALERT_TOKEN`. Public WebRTC
+preview rooms use random invite links, expire after two hours, and relay
+signaling/chat only between sockets holding the room invite. The media stream
+is peer-to-peer, is not recorded by this server, and may need a TURN service on
+restricted networks. For multi-instance deployments, use shared room/session
+storage and configure TURN before relying on live calls.
 
 `GET /api/platform/info` returns platform contact, social, and bank settings;
 these default to empty values until verified details are configured.
@@ -109,6 +114,54 @@ The web compliance form presents an informational draft before submitting.
 Acknowledging it records only that the user chose to continue with the review
 request; it is not an electronic signature, contract acceptance, payment, or
 compliance approval. Review records currently exist only in server memory.
+
+The website's Saudi location picker and Open-Meteo weather control use the
+checked-in `public/saudi_regions.js` data. It covers the 13 regions, their
+governorates, and a curated selection of cities and centers; it is not a
+government-maintained exhaustive gazetteer of every village or center. Weather
+is fetched from Open-Meteo without an API key.
+
+Listing images, videos, and PDFs can be saved to PostgreSQL after the listing
+is created (up to five files, 3 MB each, and 12 MB total per upload). Media is
+served from the same API and linked to its listing; plan for database storage
+and backups accordingly. Uploads require the one-time bearer token returned
+when the listing is created. Mark equirectangular images as panoramas to enable
+the browser's WebGL spherical viewer, with a draggable image fallback when
+WebGL is unavailable.
+
+Staff accounts are stored in `staff_users`; passwords use scrypt hashes and
+staff access tokens are short-lived in-memory sessions. Set the server-only
+`SUPER_ADMIN_TOKEN` (at least 32 random bytes) to enable the owner panel. The
+token must be entered in the owner panel and is not saved by the browser.
+Staff permissions are enforced by separate API routes for listing review,
+appointment/request management, CRM follow-ups, recruitment, story moderation,
+and product management. Staff routes do not return platform settings, bank
+details, or server secrets. Job applications are written to `job_applications`
+(and the legacy `career_applications` table for compatibility). Applicants may
+attach a PDF resume up to 2 MB; resumes are downloadable only through the
+recruitment-permission endpoint.
+
+VIP stories are available through `GET/POST /api/stories`; publishing accepts
+validated image or video media and is rate-limited. Stories expire after 24
+hours unless a staff member with `manageStories` pins them. Public sharing uses
+high-entropy links. The stories API, like other PostgreSQL-backed features,
+requires `DATABASE_URL`.
+
+The affiliate catalog is exposed through `GET /api/products`. Creating or
+editing products and viewing the staff catalog requires the `manageProducts`
+permission. Product photos are limited to five validated JPEG, PNG, or WebP
+images (3 MB each, 12 MB total). Product and media records are stored in
+PostgreSQL. Contact invitation uses the browser Contacts Picker when
+available, with a copyable invite message as a fallback; Flutter uses the
+platform contact picker and only opens the SMS or WhatsApp composer after the
+user selects a contact.
+
+Stories and products are not a payment, checkout, or affiliate-payout system.
+Product prices, inventory, and commission values are listing information;
+orders, shipping, payments, and commission settlement still require separate
+business and payment integrations. Public story submission currently has no
+account identity, so configure operational moderation and database access
+before enabling it for a public production audience.
 
 The chat monitor uses keyword matching; it is not an AI model and does not
 block messages. Developer alerts are sent only to authenticated Socket.IO

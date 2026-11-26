@@ -6,11 +6,16 @@ void main() {
     test('routes supported phone and conferencing links externally', () {
       for (final url in [
         'tel:+966500000000',
+        'sms:+966500000000?body=Join%20me',
         'https://wa.me/966500000000',
         'https://api.whatsapp.com/send',
         'https://zoom.us/j/123',
         'https://us02.zoom.us/j/123',
         'https://meet.google.com/abc-defg-hij',
+        'https://snapchat.com/scan',
+        'https://www.instagram.com/',
+        'https://twitter.com/intent/tweet',
+        'https://imo.im/',
       ]) {
         expect(shouldOpenExternally(Uri.parse(url)), isTrue, reason: url);
       }

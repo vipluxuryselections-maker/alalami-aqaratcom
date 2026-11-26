@@ -303,9 +303,12 @@
         }
     </style>
     <link rel="stylesheet" href="/style.css">
+    <script src="/socket.io/socket.io.js" defer></script>
+    <script src="/saudi_regions.js" defer></script>
     <script src="/app.js" defer></script>
 </head>
 <body>
+    <datalist id="saudi-location-options"></datalist>
     <main class="container">
         <header class="topbar">
             <div class="brand">
@@ -324,16 +327,13 @@
             <div class="live-info">
                 <span id="live-clock" aria-label="الوقت الحالي">--:--</span>
                 <span id="live-date" aria-label="التاريخ الميلادي والهجري">جارٍ تحميل التاريخ</span>
-                <label class="weather-control" for="weather-city">
+                <div class="weather-control" aria-label="اختيار موقع الطقس">
                     الطقس
-                    <select id="weather-city" aria-label="اختر مدينة الطقس">
-                        <option value="24.7136,46.6753">الرياض</option>
-                        <option value="21.4858,39.1925">جدة</option>
-                        <option value="26.4207,50.0888">الدمام</option>
-                        <option value="21.3891,39.8579">مكة المكرمة</option>
-                        <option value="24.5247,39.5692">المدينة المنورة</option>
-                    </select>
-                </label>
+                    <input id="weather-location-search" type="search" list="saudi-location-options" autocomplete="off" placeholder="ابحث عن مدينة">
+                    <select id="weather-region" aria-label="منطقة الطقس"></select>
+                    <select id="weather-province" aria-label="محافظة الطقس"></select>
+                    <select id="weather-city" aria-label="مدينة الطقس"></select>
+                </div>
                 <span id="weather-status" role="status">الطقس غير متاح بعد</span>
             </div>
             <div class="accessibility-tools" aria-label="إمكانية الوصول">
@@ -348,10 +348,14 @@
         <nav class="home-nav" aria-label="التنقل الرئيسي">
             <a href="#home-hub">الرئيسية</a>
             <a href="#listing-section">إضافة إعلان</a>
+            <a href="#affiliate-section">المنتجات والتسويق بالعمولة</a>
+            <a href="#stories-section">قصص VIP</a>
             <a href="#market-section">السوق</a>
             <a href="#office-section">المكتب والدفتر</a>
             <a href="#partners-section">الشركاء والتمويل</a>
-            <a href="#careers-section">الوظائف</a>
+            <a href="/careers">الوظائف</a>
+            <a href="#staff-section">بوابة الموظفين</a>
+            <a href="#invite-section">دعوة جهات الاتصال</a>
             <a href="#contact-section">تواصل معنا</a>
         </nav>
 
@@ -360,6 +364,32 @@
             <div class="ticker-window" id="offer-ticker">
                 <p>منصة موحدة لاستعراض العقارات والأصول والفرص الاستثمارية. تحقّق من البيانات والأطراف قبل أي التزام.</p>
             </div>
+        </section>
+
+        <section class="section-box" id="stories-section" aria-labelledby="stories-heading">
+            <div class="stories-heading">
+                <div>
+                    <p class="eyebrow">VIP STORIES</p>
+                    <h2 id="stories-heading">القصص الحية</h2>
+                </div>
+                <button class="secondary-button" id="stories-refresh" type="button">تحديث القصص</button>
+            </div>
+            <p class="muted">تختفي القصص تلقائياً بعد 24 ساعة؛ القصص المثبتة بإدارة المنصة تبقى ظاهرة. لا تنشر بيانات شخصية أو مواقع حساسة.</p>
+            <div id="stories-bar" class="stories-bar" role="list" aria-label="قصص VIP"></div>
+            <p id="stories-status" role="status" aria-live="polite"></p>
+            <details>
+                <summary>نشر قصة جديدة</summary>
+                <form id="story-form">
+                    <label for="story-creator-name">اسم العرض</label>
+                    <input id="story-creator-name" maxlength="100" required>
+                    <label for="story-caption">وصف مختصر (اختياري)</label>
+                    <textarea id="story-caption" maxlength="500" rows="2"></textarea>
+                    <label for="story-media">صورة أو فيديو (حتى 5 ميغابايت)</label>
+                    <input id="story-media" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" required>
+                    <div id="story-preview" class="media-preview"></div>
+                    <button class="primary-button" id="story-submit" type="submit">نشر لمدة 24 ساعة</button>
+                </form>
+            </details>
         </section>
 
         <div class="legal-notice">
@@ -372,6 +402,9 @@
             <p class="hero-copy">بوابة موحدة لاستكشاف الفرص العقارية والأصول، وإدارة بيانات العروض والطلبات ضمن تجربة عربية واضحة.</p>
             <div class="hub-grid" aria-label="أبواب المنصة">
                 <a href="#listing-section"><strong>إضافة فرصة</strong><span>طلب أو إعلان أو صفقة</span></a>
+                <a href="#affiliate-section"><strong>متجر العمولة</strong><span>منتجات وأرباح تسويق شفافة</span></a>
+                <a href="#stories-section"><strong>قصص VIP</strong><span>لقطات عقارية تنتهي خلال 24 ساعة</span></a>
+                <a href="#invite-section"><strong>دعوة الأصدقاء</strong><span>شارك رابط المنصة مباشرة</span></a>
                 <a href="#market-section"><strong>استعراض السوق</strong><span>فلترة العروض والطلبات</span></a>
                 <a href="#office-section"><strong>المكتب والدفتر</strong><span>السجلات والمهام</span></a>
                 <a href="#partners-section"><strong>التمويل والشركاء</strong><span>حاسبات وروابط إرشادية</span></a>
@@ -404,6 +437,76 @@
             </article>
         </section>
 
+        <section class="section-box" id="affiliate-section" aria-labelledby="affiliate-heading">
+            <p class="eyebrow">AFFILIATE MARKETPLACE</p>
+            <h2 id="affiliate-heading">خيارات أخرى | التسويق بالعمولة والمنتجات التجارية</h2>
+            <p class="muted">العمولة المعروضة إرشادية وتحدد مع البائع قبل الطلب. تحقق من المنتج والبائع والشحن؛ لا تُعالج المدفوعات داخل المنصة.</p>
+            <div class="market-controls">
+                <label for="product-category-filter">التصنيف</label>
+                <select id="product-category-filter">
+                    <option value="">كل التصنيفات</option>
+                    <option>الملابس</option><option>الإكسسوارات</option><option>الأجهزة</option>
+                    <option>الألعاب</option><option>الأحذية</option><option>العطورات</option>
+                    <option>الشموع</option>
+                </select>
+                <button class="secondary-button" id="products-refresh" type="button">تحديث المنتجات</button>
+            </div>
+            <div id="products-results" class="product-grid" aria-live="polite"></div>
+            <details id="product-create-details" hidden>
+                <summary>إضافة منتج (صلاحية إدارة المنتجات مطلوبة)</summary>
+                <form id="product-form">
+                    <div class="grid-two">
+                        <div><label for="product-name">اسم المنتج</label><input id="product-name" maxlength="160" required></div>
+                        <div>
+                            <label for="product-category">التصنيف</label>
+                            <select id="product-category" required>
+                                <option>الملابس</option><option>الإكسسوارات</option><option>الأجهزة</option>
+                                <option>الألعاب</option><option>الأحذية</option><option>العطورات</option>
+                                <option>الشموع</option><option value="أخرى">أخرى — تصنيف حر</option>
+                            </select>
+                        </div>
+                        <div id="product-custom-category-field" hidden><label for="product-custom-category">التصنيف المخصص</label><input id="product-custom-category" maxlength="60"></div>
+                        <div><label for="product-price">السعر (ريال)</label><input id="product-price" type="number" min="0.01" step="0.01" required></div>
+                        <div>
+                            <label for="product-commission-type">نوع العمولة</label>
+                            <select id="product-commission-type"><option value="percent">نسبة مئوية (%)</option><option value="amount">مبلغ ثابت (ريال)</option></select>
+                        </div>
+                        <div><label for="product-commission-value">قيمة العمولة</label><input id="product-commission-value" type="number" min="0.01" step="0.01" required></div>
+                        <div><label for="product-sizes">المقاسات (مفصولة بفواصل)</label><input id="product-sizes" maxlength="300" placeholder="S, M, L, XL أو مقاسات مخصصة"></div>
+                        <div><label for="product-colors">الألوان (مفصولة بفواصل)</label><input id="product-colors" maxlength="300"></div>
+                        <div><label for="product-stock">الكمية المتاحة</label><input id="product-stock" type="number" min="0" step="1" value="0" required></div>
+                        <div><label for="product-seller-name">اسم البائع</label><input id="product-seller-name" maxlength="100" required></div>
+                        <div><label for="product-seller-phone">هاتف البائع/واتساب</label><input id="product-seller-phone" type="tel" maxlength="50" required></div>
+                    </div>
+                    <label for="product-description">وصف المنتج</label><textarea id="product-description" maxlength="2000" rows="3"></textarea>
+                    <fieldset>
+                        <legend>خيارات الشحن والتوصيل</legend>
+                        <label class="checkbox-label"><input type="checkbox" name="product-shipping" value="توصيل فوري"><span>توصيل فوري</span></label>
+                        <label class="checkbox-label"><input type="checkbox" name="product-shipping" value="شحن سريع لجميع مناطق المملكة"><span>شحن سريع لجميع مناطق المملكة</span></label>
+                        <label class="checkbox-label"><input type="checkbox" name="product-shipping" value="استلام من الفرع"><span>استلام من الفرع</span></label>
+                    </fieldset>
+                    <label class="drop-zone" id="product-image-drop-zone" for="product-images">
+                        <strong>اسحب صور المنتج هنا أو اختر ملفات</strong>
+                        <span>حتى 5 صور JPEG أو PNG أو WebP، 3 ميغابايت للصورة.</span>
+                        <input id="product-images" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+                    </label>
+                    <div id="product-image-preview" class="media-preview"></div>
+                    <button class="primary-button" id="product-submit" type="submit">نشر المنتج</button>
+                    <p id="product-status" role="status" aria-live="polite"></p>
+                </form>
+            </details>
+        </section>
+
+        <section class="section-box" id="invite-section" aria-labelledby="invite-heading">
+            <h2 id="invite-heading">دعوة جهات الاتصال إلى المنصة</h2>
+            <p class="muted">تُستخدم جهة الاتصال التي تختارها محلياً فقط لإعداد رابط الدعوة؛ لا تُرفع جهات اتصالك إلى الخادم.</p>
+            <button class="primary-button" id="invite-contacts" type="button">اختيار جهة اتصال</button>
+            <button class="secondary-button" id="invite-copy" type="button">نسخ رسالة الدعوة</button>
+            <button class="tool-button" id="invite-share" type="button">مشاركة الدعوة</button>
+            <div id="invite-contact-actions" class="market-tabs" hidden></div>
+            <p id="invite-status" role="status" aria-live="polite"></p>
+        </section>
+
         <section class="section-box" id="careers-section" aria-labelledby="careers-heading">
             <h2 id="careers-heading">الوظائف | Careers</h2>
             <p class="muted">أرسل بياناتك الأساسية بموافقتك لغرض التوظيف فقط. لا ترفق مستندات هوية أو بيانات مالية.</p>
@@ -425,6 +528,8 @@
                 </div>
                 <label for="career-note">نبذة مختصرة</label>
                 <textarea id="career-note" maxlength="2000" rows="4" required></textarea>
+                <label for="career-resume">السيرة الذاتية (PDF اختياري، حتى 2 ميغابايت)</label>
+                <input id="career-resume" type="file" accept="application/pdf,.pdf">
                 <label class="checkbox-label" for="career-consent">
                     <input id="career-consent" type="checkbox" required>
                     <span>أوافق على حفظ البيانات لغرض دراسة طلب التوظيف، وأفهم أنها لا تُرسل عبر البريد تلقائياً.</span>
@@ -432,6 +537,101 @@
                 <button class="primary-button" id="career-submit" type="submit">إرسال طلب التوظيف</button>
                 <p id="career-status" role="status" aria-live="polite"></p>
             </form>
+        </section>
+
+        <section class="section-box" id="staff-section" aria-labelledby="staff-heading">
+            <h2 id="staff-heading">إدارة الموظفين والبوابة الداخلية</h2>
+            <p class="muted">تُدار الصلاحيات على الخادم. لا تمنح هذه الواجهة الموظفين وصولاً إلى إعدادات المنصة أو الحسابات البنكية أو مفاتيح الربط.</p>
+            <details>
+                <summary>لوحة المالك الأعلى — إنشاء وإدارة الحسابات</summary>
+                <label for="super-admin-token">رمز SUPER_ADMIN_TOKEN</label>
+                <input id="super-admin-token" type="password" autocomplete="off">
+                <form id="staff-create-form">
+                    <div class="grid-two">
+                        <div><label for="staff-name">الاسم الكامل</label><input id="staff-name" maxlength="150" required></div>
+                        <div><label for="staff-username">اسم المستخدم</label><input id="staff-username" maxlength="60" autocomplete="off" required></div>
+                        <div><label for="staff-password">كلمة مرور أولية (12 حرفاً على الأقل)</label><input id="staff-password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>
+                    </div>
+                    <fieldset>
+                        <legend>الصلاحيات</legend>
+                        <label class="checkbox-label"><input type="checkbox" name="staff-permission" value="reviewListings"><span>مراجعة الإعلانات</span></label>
+                        <label class="checkbox-label"><input type="checkbox" name="staff-permission" value="manageRequests"><span>إدارة الطلبات والمواعيد</span></label>
+                        <label class="checkbox-label"><input type="checkbox" name="staff-permission" value="crm"><span>متابعة العملاء CRM</span></label>
+                        <label class="checkbox-label"><input type="checkbox" name="staff-permission" value="recruitment"><span>مراجعة طلبات التوظيف</span></label>
+                        <label class="checkbox-label"><input type="checkbox" name="staff-permission" value="manageProducts"><span>إدارة المنتجات والعمولات</span></label>
+                        <label class="checkbox-label"><input type="checkbox" name="staff-permission" value="manageStories"><span>إدارة القصص وتثبيت VIP</span></label>
+                    </fieldset>
+                    <button class="primary-button" type="submit">إنشاء حساب موظف</button>
+                </form>
+                <button class="secondary-button" id="staff-refresh" type="button">عرض حسابات الموظفين</button>
+                <div id="staff-admin-results" class="staff-results" role="status" aria-live="polite"></div>
+                <p id="staff-admin-status" role="status" aria-live="polite"></p>
+            </details>
+            <form id="staff-login-form">
+                <h3>دخول الموظفين</h3>
+                <div class="grid-two">
+                    <div><label for="staff-login-username">اسم المستخدم</label><input id="staff-login-username" autocomplete="username" required></div>
+                    <div><label for="staff-login-password">كلمة المرور</label><input id="staff-login-password" type="password" autocomplete="current-password" required></div>
+                </div>
+                <button class="secondary-button" type="submit">تسجيل الدخول</button>
+            </form>
+            <div id="staff-console" hidden>
+                <p id="staff-session-label" role="status"></p>
+                <div class="market-tabs" id="staff-tools" role="group" aria-label="أدوات الموظف"></div>
+                <div id="staff-results" class="staff-results" aria-live="polite"></div>
+                <form id="staff-crm-form" hidden>
+                    <h3>إضافة متابعة عميل</h3>
+                    <label for="crm-name">اسم العميل</label><input id="crm-name" maxlength="150" required>
+                    <label for="crm-phone">رقم التواصل</label><input id="crm-phone" maxlength="50" type="tel" required>
+                    <label for="crm-status">الحالة</label>
+                    <select id="crm-status"><option>جديد</option><option>تم التواصل</option><option>مهتم</option><option>غير مهتم</option><option>مغلق</option></select>
+                    <label for="crm-note">ملاحظات المتابعة</label><textarea id="crm-note" maxlength="2000" required></textarea>
+                    <label class="checkbox-label"><input id="crm-consent" type="checkbox" required><span>لدي موافقة مناسبة لحفظ بيانات التواصل لغرض المتابعة.</span></label>
+                    <button class="primary-button" type="submit">حفظ المتابعة</button>
+                </form>
+                <button class="tool-button" id="staff-logout" type="button">تسجيل الخروج</button>
+            </div>
+            <p id="staff-status" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="section-box" id="live-section" aria-labelledby="live-heading">
+            <h2 id="live-heading">معاينة العقار مباشرة والاجتماعات</h2>
+            <p class="muted">بث الفيديو مشفّر بين الطرفين عبر WebRTC ولا يُسجّل في الخادم. يستخدم الاتصال STUN عاماً؛ قد يظهر عنوان الشبكة للطرفين بحسب المتصفح، وقد يلزم TURN في بعض الشبكات. رابط الغرفة سري ومؤقت وينتهي بعد ساعتين.</p>
+            <div class="grid-two">
+                <button class="primary-button" id="live-create-room" type="button">إنشاء رابط معاينة حية</button>
+                <div>
+                    <label for="live-join-link">أدخل رابط الغرفة أو رمزها</label>
+                    <input id="live-join-link" type="text" autocomplete="off">
+                    <button class="secondary-button" id="live-join-room" type="button">الانضمام إلى المعاينة</button>
+                </div>
+            </div>
+            <p id="live-room-status" role="status" aria-live="polite"></p>
+            <div id="live-controls" hidden>
+                <label for="live-invite-link">رابط دعوة الطرف الآخر</label>
+                <div class="grid-two">
+                    <input id="live-invite-link" readonly>
+                    <button class="secondary-button" id="live-copy-link" type="button">نسخ رابط الدعوة</button>
+                </div>
+                <div class="live-video-grid">
+                    <video id="live-local-video" autoplay muted playsinline aria-label="معاينة الكاميرا المحلية"></video>
+                    <video id="live-remote-video" autoplay playsinline aria-label="بث الطرف الآخر"></video>
+                </div>
+                <button class="primary-button" id="live-start-camera" type="button">تشغيل الكاميرا والميكروفون</button>
+                <button class="tool-button" id="live-leave-room" type="button">إنهاء الاتصال</button>
+                <form id="live-chat-form">
+                    <div class="grid-two">
+                        <div><label for="live-sender-name">اسم العرض</label><input id="live-sender-name" maxlength="120" value="زائر"></div>
+                        <div><label for="live-chat-input">رسالة الغرفة</label><input id="live-chat-input" maxlength="1000" required></div>
+                    </div>
+                    <button class="secondary-button" type="submit">إرسال الرسالة</button>
+                </form>
+                <div id="live-chat-log" class="chat-messages" role="log" aria-live="polite"></div>
+                <div class="market-tabs" aria-label="بدء اجتماع عبر مزود خارجي">
+                    <a class="tool-button" href="https://meet.google.com/new" target="_blank" rel="noopener noreferrer">فتح Google Meet</a>
+                    <a class="tool-button" href="https://zoom.us/start/videomeeting" target="_blank" rel="noopener noreferrer">فتح Zoom</a>
+                    <a class="tool-button" href="https://imo.im/" target="_blank" rel="noopener noreferrer">فتح imo</a>
+                </div>
+            </div>
         </section>
 
         <section class="section-box listing-section" id="listing-section" aria-labelledby="listing-heading">
@@ -442,8 +642,14 @@
             <button class="secondary-button" id="analyze-listing" type="button">تحليل النص وتعبئة الحقول</button>
             <p id="parser-status" class="muted" role="status" aria-live="polite"></p>
             <div id="map-preview" class="map-preview" hidden></div>
+            <input id="listing-latitude" type="hidden">
+            <input id="listing-longitude" type="hidden">
             <form id="listing-form">
                 <div class="grid-two">
+                    <div>
+                        <label for="listing-location-search">بحث فوري عن موقع:</label>
+                        <input id="listing-location-search" type="search" list="saudi-location-options" autocomplete="off" placeholder="اكتب المنطقة أو المحافظة أو المدينة">
+                    </div>
                     <div>
                         <label for="listing-path">مسار الإضافة:</label>
                         <select id="listing-path" required>
@@ -491,6 +697,18 @@
                         <input id="listing-area" type="number" min="0" max="9999999999999.99" step="0.01" inputmode="decimal">
                     </div>
                     <div>
+                        <label for="listing-region">المنطقة الإدارية:</label>
+                        <select id="listing-region"></select>
+                    </div>
+                    <div>
+                        <label for="listing-province">المحافظة:</label>
+                        <select id="listing-province"></select>
+                    </div>
+                    <div>
+                        <label for="listing-city">المدينة أو المركز:</label>
+                        <select id="listing-city"></select>
+                    </div>
+                    <div>
                         <label for="listing-location">المدينة / الموقع:</label>
                         <input id="listing-location" type="text" maxlength="150" required placeholder="المدينة والحي">
                     </div>
@@ -508,11 +726,16 @@
                     <span>أوافق على حفظ رقم التواصل مع السجل في قاعدة البيانات؛ لن يظهر للعامة قبل توفير تسجيل دخول وصلاحيات مناسبة.</span>
                 </label>
                 <label class="drop-zone" id="media-drop-zone" for="listing-media">
-                    <strong>اسحب الصور أو الفيديو إلى هنا أو اختر ملفات</strong>
-                    <span>معاينة محلية فقط؛ التخزين السحابي غير مهيأ.</span>
-                    <input id="listing-media" type="file" accept="image/*,video/*" multiple capture="environment">
+                    <strong>اسحب الصور أو الفيديو أو PDF إلى هنا أو اختر ملفات</strong>
+                    <span>تُرفع الملفات إلى PostgreSQL بعد حفظ الإعلان (حتى 5 ملفات، 3 ميغابايت لكل ملف).</span>
+                    <input id="listing-media" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,application/pdf" multiple capture="environment">
+                </label>
+                <label class="checkbox-label" for="listing-panorama">
+                    <input id="listing-panorama" type="checkbox">
+                    <span>تصنيف الصور المحددة كصور بانورامية 360°</span>
                 </label>
                 <div id="media-preview" class="media-preview" aria-live="polite"></div>
+                <button class="secondary-button" id="media-upload-retry" type="button" hidden>إعادة رفع الوسائط للإعلان المحفوظ</button>
                 <button class="primary-button" id="listing-submit" type="submit">حفظ في الدفتر</button>
                 <p id="listing-status" class="listing-status" role="status" aria-live="polite"></p>
             </form>
@@ -521,6 +744,8 @@
                 <button class="secondary-button" id="refresh-listings" type="button">تحديث</button>
             </div>
             <div class="market-controls">
+                <label for="market-location">بحث/تصفية المنطقة أو المدينة</label>
+                <input id="market-location" type="search" list="saudi-location-options" autocomplete="off" placeholder="كل المواقع">
                 <div class="market-tabs" role="group" aria-label="تصنيف السوق">
                     <button class="market-tab is-active" data-market-filter="all" type="button">الكل</button>
                     <button class="market-tab" data-market-filter="request" type="button">الطلبات</button>
@@ -545,6 +770,35 @@
                 <p class="muted">جارٍ تحميل السجلات...</p>
             </div>
         </section>
+
+        <dialog id="panorama-dialog" aria-label="عارض الصور البانورامية">
+            <div class="panorama-toolbar">
+                <strong>جولة بانورامية 360° — اسحب الصورة للتدوير</strong>
+                <button class="tool-button" id="panorama-close" type="button">إغلاق</button>
+            </div>
+            <div id="panorama-stage">
+                <canvas id="panorama-canvas" aria-label="عارض ثلاثي الأبعاد للصورة البانورامية"></canvas>
+                <img id="panorama-image" alt="صورة بانورامية للعقار">
+            </div>
+        </dialog>
+        <dialog id="story-viewer" class="story-viewer" aria-label="عارض قصص VIP">
+            <button class="story-close tool-button" id="story-close" type="button" aria-label="إغلاق القصة">إغلاق ✕</button>
+            <div class="story-progress-track"><span id="story-progress"></span></div>
+            <div id="story-content" class="story-content"></div>
+            <div class="story-viewer-footer">
+                <p id="story-viewer-caption"></p>
+                <div class="market-tabs">
+                    <button class="tool-button" id="story-share-native" type="button">مشاركة</button>
+                    <button class="tool-button" id="story-share-whatsapp" type="button">WhatsApp</button>
+                    <button class="tool-button" id="story-share-snapchat" type="button">Snapchat</button>
+                    <button class="tool-button" id="story-share-instagram" type="button">Instagram</button>
+                    <button class="tool-button" id="story-share-x" type="button">X</button>
+                    <button class="tool-button" id="story-copy-link" type="button">نسخ الرابط</button>
+                </div>
+            </div>
+            <button class="story-nav story-prev" id="story-previous" type="button" aria-label="القصة السابقة">‹</button>
+            <button class="story-nav story-next" id="story-next" type="button" aria-label="القصة التالية">›</button>
+        </dialog>
 
         <section class="section-box" id="market-section" aria-labelledby="market-heading">
             <h2 id="market-heading">🛒 بورصة تجارة الأصول المتعددة</h2>

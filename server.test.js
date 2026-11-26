@@ -2,8 +2,10 @@
 
 const { after, before, test } = require('node:test');
 const assert = require('node:assert/strict');
+process.env.NODE_ENV = 'test';
 process.env.COMPLIANCE_BYPASS_TOKEN = 'test-compliance-bypass-token';
 process.env.PLATFORM_ADMIN_TOKEN = 'test-platform-admin-token';
+process.env.SUPER_ADMIN_TOKEN = 'test-super-admin-token-with-32-characters';
 const { app, createFlexibleDeal } = require('./server');
 
 let server;
@@ -28,6 +30,8 @@ test('website assets use same-origin CSP with an allowlisted Cairo font', async 
   const script = await scriptResponse.text();
   const stylesResponse = await fetch(`${baseUrl}/style.css`);
   const styles = await stylesResponse.text();
+  const regionsResponse = await fetch(`${baseUrl}/saudi_regions.js`);
+  const regions = await regionsResponse.text();
   const contentSecurityPolicy = pageResponse.headers.get('content-security-policy');
 
   assert.equal(pageResponse.status, 200);
@@ -42,8 +46,19 @@ test('website assets use same-origin CSP with an allowlisted Cairo font', async 
   assert.match(page, /id="home-hub"/);
   assert.match(page, /id="live-clock"/);
   assert.match(page, /id="weather-city"/);
+  assert.match(page, /id="weather-location-search"/);
+  assert.match(page, /id="listing-location-search"/);
+  assert.match(page, /id="staff-section"/);
+  assert.match(page, /id="stories-section"/);
+  assert.match(page, /id="story-viewer"/);
+  assert.match(page, /id="affiliate-section"/);
+  assert.match(page, /id="product-form"/);
+  assert.match(page, /id="invite-contacts"/);
+  assert.match(page, /id="live-section"/);
+  assert.match(page, /id="panorama-dialog"/);
   assert.match(page, /id="contrast-toggle"/);
   assert.match(page, /id="career-form"/);
+  assert.match(page, /id="career-resume"/);
   assert.match(page, /id="listing-text"/);
   assert.match(page, /id="media-drop-zone"/);
   assert.match(page, /id="partners-list"/);
@@ -63,6 +78,27 @@ test('website assets use same-origin CSP with an allowlisted Cairo font', async 
   assert.ok(contentSecurityPolicy?.includes('blob:'));
   assert.equal(scriptResponse.status, 200);
   assert.equal(stylesResponse.status, 200);
+  assert.equal(regionsResponse.status, 200);
+  for (const region of [
+    'الرياض',
+    'مكة المكرمة',
+    'المدينة المنورة',
+    'القصيم',
+    'المنطقة الشرقية',
+    'عسير',
+    'تبوك',
+    'حائل',
+    'الحدود الشمالية',
+    'جازان',
+    'نجران',
+    'الباحة',
+    'الجوف',
+  ]) {
+    assert.ok(regions.includes(`name: '${region}'`), `Missing region: ${region}`);
+  }
+  for (const locality of ['بيشة', 'سبت العلايا', 'تثليث', 'النماص', 'محايل عسير', 'الخرج', 'الدوادمي', 'المجمعة', 'القنفذة', 'الليث', 'ينبع', 'العلا', 'عنيزة', 'الرس', 'الهفوف', 'الجبيل', 'الخبر', 'القطيف', 'حفر الباطن', 'صبيا', 'أبو عريش', 'شرورة', 'بلجرشي', 'القريات']) {
+    assert.ok(regions.includes(`'${locality}'`), `Missing example locality: ${locality}`);
+  }
   assert.match(styles, /#090d16/i);
   assert.match(script, /بضائع مستوردة/);
   assert.match(script, /\/api\/ledger\/add/);
@@ -73,13 +109,161 @@ test('website assets use same-origin CSP with an allowlisted Cairo font', async 
   assert.match(script, /\/api\/platform\/info/);
   assert.match(script, /function loadPlatformInfo/);
   assert.match(script, /function analyzeListingText/);
+  assert.match(script, /function extractMapCoordinates/);
+  assert.match(script, /api\/listing-media/);
+  assert.match(script, /live_signal/);
+  assert.match(script, /navigator\.contacts\.select/);
+  assert.match(script, /function submitStory/);
+  assert.match(script, /function submitAffiliateProduct/);
   assert.match(script, /function updateLiveClock/);
   assert.match(script, /function calculateMortgage/);
   assert.match(script, /function loadPartners/);
   assert.match(script, /\/api\/careers\/apply/);
+  assert.match(script, /resumeReceived/);
   assert.match(script, /createTextNode/);
   assert.doesNotMatch(script, /\.innerHTML\s*=/);
   assert.doesNotMatch(script, /x-compliance-bypass-token/i);
+});
+
+test('careers page has a direct route and returns the application form', async () => {
+  const response = await fetch(`${baseUrl}/careers`);
+  const page = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(page, /id="career-form"/);
+});
+
+test('staff APIs reject unauthenticated access and protect owner setup', async () => {
+  for (const path of [
+    '/api/staff/job-applications',
+    '/api/staff/requests',
+    '/api/staff/listings',
+    '/api/staff/crm',
+  ]) {
+    const response = await fetch(`${baseUrl}${path}`);
+    assert.equal(response.status, 401, path);
+    assert.equal((await response.json()).code, 'STAFF_AUTH_REQUIRED');
+  }
+
+  const missingOwnerToken = await fetch(`${baseUrl}/api/admin/staff-users`);
+  assert.equal(missingOwnerToken.status, 401);
+  assert.equal((await missingOwnerToken.json()).code, 'SUPER_ADMIN_UNAUTHORIZED');
+
+  const configuredOwner = await fetch(`${baseUrl}/api/admin/staff-users`, {
+    headers: { 'x-super-admin-token': 'test-super-admin-token-with-32-characters' },
+  });
+  assert.equal(configuredOwner.status, 503);
+  assert.equal((await configuredOwner.json()).code, 'DATABASE_NOT_CONFIGURED');
+});
+
+test('staff creation rejects unsupported privileges before touching the database', async () => {
+  const response = await fetch(`${baseUrl}/api/admin/staff-users`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-super-admin-token': 'test-super-admin-token-with-32-characters',
+    },
+    body: JSON.stringify({
+      username: 'reviewer1',
+      fullName: 'Reviewer',
+      password: 'a-secure-password',
+      permissions: { serverSettings: true },
+    }),
+  });
+
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).success, false);
+});
+
+test('VIP stories require valid signed media and expose no client-controlled pin flag', async () => {
+  const invalidMedia = await fetch(`${baseUrl}/api/stories`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      creatorName: 'VIP guest',
+      caption: 'Story',
+      pinned: true,
+      media: { name: 'fake.jpg', contentType: 'image/jpeg', data: 'aW52YWxpZA==' },
+    }),
+  });
+  assert.equal(invalidMedia.status, 400);
+  assert.equal((await invalidMedia.json()).success, false);
+
+  const invalidPin = await fetch(`${baseUrl}/api/staff/stories/not-a-uuid/pin`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ pinned: true }),
+  });
+  assert.equal(invalidPin.status, 401);
+  assert.equal((await invalidPin.json()).code, 'STAFF_AUTH_REQUIRED');
+
+  const publicFeed = await fetch(`${baseUrl}/api/stories`);
+  assert.equal(publicFeed.status, 503);
+  assert.equal((await publicFeed.json()).code, 'DATABASE_NOT_CONFIGURED');
+});
+
+test('affiliate products require the product-management permission', async () => {
+  const missingPermission = await fetch(`${baseUrl}/api/staff/products`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ name: 'Product' }),
+  });
+  assert.equal(missingPermission.status, 401);
+  assert.equal((await missingPermission.json()).code, 'STAFF_AUTH_REQUIRED');
+
+  const publicCatalog = await fetch(`${baseUrl}/api/products`);
+  assert.equal(publicCatalog.status, 503);
+  assert.equal((await publicCatalog.json()).code, 'DATABASE_NOT_CONFIGURED');
+});
+
+test('direct VIP story links return the public app shell', async () => {
+  const response = await fetch(`${baseUrl}/stories/${'a'.repeat(64)}`);
+  const page = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(page, /id="story-viewer"/);
+});
+
+test('live rooms return temporary high-entropy invite credentials', async () => {
+  const response = await fetch(`${baseUrl}/api/live/rooms`, { method: 'POST' });
+  const data = await response.json();
+
+  assert.equal(response.status, 201);
+  assert.equal(data.success, true);
+  assert.match(data.roomId, /^[a-f0-9]{64}$/);
+  assert.ok(Date.parse(data.expiresAt) > Date.now());
+});
+
+test('media uploads validate file content and location coordinates before persistence', async () => {
+  const mediaResponse = await fetch(`${baseUrl}/api/listing-media`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: 'Bearer test-media-upload-token',
+    },
+    body: JSON.stringify({
+      listingId: 1,
+      files: [{ name: 'image.jpg', contentType: 'image/jpeg', data: 'aW52YWxpZA==' }],
+    }),
+  });
+  assert.equal(mediaResponse.status, 400);
+  assert.equal((await mediaResponse.json()).success, false);
+
+  const locationResponse = await fetch(`${baseUrl}/api/ledger/add`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      itemType: 'إعلان',
+      title: 'عقار للاختبار',
+      assetCategory: 'أرض',
+      dealType: 'بيع',
+      price: 100,
+      location: 'الرياض',
+      latitude: 24.7,
+    }),
+  });
+  assert.equal(locationResponse.status, 400);
+  assert.equal((await locationResponse.json()).success, false);
 });
 
 test('health endpoint reports the API as available', async () => {
@@ -108,6 +292,19 @@ test('career applications require valid data and explicit privacy consent', asyn
       phone: '+966500000000',
       role: 'technology',
       note: 'Experience',
+      privacyConsent: true,
+    },
+    {
+      fullName: 'Candidate',
+      email: 'candidate@example.com',
+      phone: '+966500000000',
+      role: 'technology',
+      note: 'Experience',
+      resume: {
+        name: 'resume.pdf',
+        contentType: 'application/pdf',
+        data: 'aW52YWxpZA==',
+      },
       privacyConsent: true,
     },
   ];

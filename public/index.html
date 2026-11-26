@@ -359,6 +359,17 @@
             <a href="#contact-section">تواصل معنا</a>
         </nav>
 
+        <section class="section-box ai-search" aria-label="البحث الذكي">
+            <label for="ai-search-input">ابحث في السوق <span class="muted">(Ctrl/⌘ + K)</span></label>
+            <div class="ai-search-controls">
+                <input id="ai-search-input" type="search" list="ai-search-suggestions" autocomplete="off" placeholder="مثال: أرض للبيع في الرياض بأقل من مليون">
+                <datalist id="ai-search-suggestions"></datalist>
+                <button class="secondary-button" id="ai-search-apply" type="button" aria-keyshortcuts="Alt+A">تصفية ذكية</button>
+                <button class="tool-button" id="ai-assistant-open" type="button">المساعد الصوتي</button>
+            </div>
+            <p id="ai-search-status" class="muted" role="status" aria-live="polite">يعالج هذا البحث محلياً؛ لا يُرسل نصك إلى مزوّد ذكاء اصطناعي.</p>
+        </section>
+
         <section class="offer-ticker" aria-label="إعلانات المنصة">
             <span class="ticker-label">بورصة العالمي VIP</span>
             <div class="ticker-window" id="offer-ticker">
@@ -440,7 +451,7 @@
         <section class="section-box" id="affiliate-section" aria-labelledby="affiliate-heading">
             <p class="eyebrow">AFFILIATE MARKETPLACE</p>
             <h2 id="affiliate-heading">خيارات أخرى | التسويق بالعمولة والمنتجات التجارية</h2>
-            <p class="muted">العمولة المعروضة إرشادية وتحدد مع البائع قبل الطلب. تحقق من المنتج والبائع والشحن؛ لا تُعالج المدفوعات داخل المنصة.</p>
+            <p class="muted">العمولة وحصة المنصة شروط معلنة من البائع للتوثيق المعلوماتي فقط؛ لا تُعالج المدفوعات أو تُنفذ التسويات داخل المنصة.</p>
             <div class="market-controls">
                 <label for="product-category-filter">التصنيف</label>
                 <select id="product-category-filter">
@@ -472,18 +483,34 @@
                             <select id="product-commission-type"><option value="percent">نسبة مئوية (%)</option><option value="amount">مبلغ ثابت (ريال)</option></select>
                         </div>
                         <div><label for="product-commission-value">قيمة العمولة</label><input id="product-commission-value" type="number" min="0.01" step="0.01" required></div>
+                        <div><label for="product-platform-share">حصة المنصة من العمولة المعروضة (%)</label><input id="product-platform-share" type="number" min="0" max="100" step="0.01" required></div>
                         <div><label for="product-sizes">المقاسات (مفصولة بفواصل)</label><input id="product-sizes" maxlength="300" placeholder="S, M, L, XL أو مقاسات مخصصة"></div>
                         <div><label for="product-colors">الألوان (مفصولة بفواصل)</label><input id="product-colors" maxlength="300"></div>
                         <div><label for="product-stock">الكمية المتاحة</label><input id="product-stock" type="number" min="0" step="1" value="0" required></div>
                         <div><label for="product-seller-name">اسم البائع</label><input id="product-seller-name" maxlength="100" required></div>
                         <div><label for="product-seller-phone">هاتف البائع/واتساب</label><input id="product-seller-phone" type="tel" maxlength="50" required></div>
+                        <div><label for="product-store-url">رابط متجر البائع (اختياري)</label><input id="product-store-url" type="url" maxlength="2048" placeholder="https://"></div>
+                        <div><label for="product-social-links">روابط حسابات التاجر/المسوق (مفصولة بفواصل)</label><input id="product-social-links" type="text" maxlength="2048" placeholder="https://..."></div>
                     </div>
                     <label for="product-description">وصف المنتج</label><textarea id="product-description" maxlength="2000" rows="3"></textarea>
+                    <fieldset>
+                        <legend>وسائل الدفع المقبولة لدى التاجر (عرض معلوماتي فقط)</legend>
+                        <label class="checkbox-label"><input type="checkbox" name="product-payment" value="مدى"><span>مدى</span></label>
+                        <label class="checkbox-label"><input type="checkbox" name="product-payment" value="Visa"><span>Visa</span></label>
+                        <label class="checkbox-label"><input type="checkbox" name="product-payment" value="Apple Pay"><span>Apple Pay</span></label>
+                        <label class="checkbox-label"><input type="checkbox" name="product-payment" value="تابي"><span>تابي</span></label>
+                        <label class="checkbox-label"><input type="checkbox" name="product-payment" value="تمارا"><span>تمارا</span></label>
+                    </fieldset>
                     <fieldset>
                         <legend>خيارات الشحن والتوصيل</legend>
                         <label class="checkbox-label"><input type="checkbox" name="product-shipping" value="توصيل فوري"><span>توصيل فوري</span></label>
                         <label class="checkbox-label"><input type="checkbox" name="product-shipping" value="شحن سريع لجميع مناطق المملكة"><span>شحن سريع لجميع مناطق المملكة</span></label>
                         <label class="checkbox-label"><input type="checkbox" name="product-shipping" value="استلام من الفرع"><span>استلام من الفرع</span></label>
+                        <label class="checkbox-label"><input type="checkbox" name="product-carrier" value="أرامكس"><span>أرامكس</span></label>
+                        <label class="checkbox-label"><input type="checkbox" name="product-carrier" value="سمسا"><span>سمسا</span></label>
+                        <label class="checkbox-label"><input type="checkbox" name="product-carrier" value="DHL"><span>DHL</span></label>
+                        <label class="checkbox-label"><input type="checkbox" name="product-carrier" value="زاجل"><span>زاجل</span></label>
+                        <label class="checkbox-label"><input type="checkbox" name="product-carrier" value="مندوب فوري"><span>مندوب فوري</span></label>
                     </fieldset>
                     <label class="drop-zone" id="product-image-drop-zone" for="product-images">
                         <strong>اسحب صور المنتج هنا أو اختر ملفات</strong>
@@ -649,6 +676,7 @@
                     <div>
                         <label for="listing-location-search">بحث فوري عن موقع:</label>
                         <input id="listing-location-search" type="search" list="saudi-location-options" autocomplete="off" placeholder="اكتب المنطقة أو المحافظة أو المدينة">
+                        <button class="tool-button" id="listing-use-gps" type="button">استخدام موقعي الحالي (بعد الإذن)</button>
                     </div>
                     <div>
                         <label for="listing-path">مسار الإضافة:</label>
@@ -856,7 +884,10 @@
                         <select id="user-nationality-flex">
                             <option value="">اختر الجنسية</option>
                             <option value="Saudi">سعودي</option>
-                            <option value="Non-Saudi">غير سعودي</option>
+                            <option value="GCC">خليجي — مواطن من دول مجلس التعاون</option>
+                            <option value="Resident">غير سعودي — مقيم نظاماً (أفراد)</option>
+                            <option value="NonResident">غير سعودي — غير مقيم / مستثمر أجنبي / سائح (أفراد)</option>
+                            <option value="SpecialRegime">الفئات ذات الأنظمة الخاصة — بما فيها حاملو الإقامة المميزة</option>
                         </select>
                     </div>
                     <div>
@@ -962,6 +993,11 @@
             </div>
         </section>
     </main>
+    <footer class="site-footer">
+        <span>© بورصة العالمي الدولية للأصول والعقارات VIP</span>
+        <a href="/privacy.html">سياسة الخصوصية | Privacy Policy</a>
+        <span>التكاملات الخارجية لا تعمل إلا بعد تهيئة مزوّديها على الخادم.</span>
+    </footer>
     <div
         class="contract-modal"
         id="contract-modal"
@@ -983,5 +1019,19 @@
             </div>
         </section>
     </div>
+    <aside id="ai-assistant" class="floating-assistant" aria-label="المساعد الذكي" hidden>
+        <div class="assistant-header" id="assistant-drag-handle">
+            <strong>المساعد الذكي</strong>
+            <button type="button" id="assistant-close" class="tool-button" aria-label="إغلاق المساعد">×</button>
+        </div>
+        <p class="muted">الأوامر الصوتية تملأ الحقل المحدد أو تتنقل داخل الصفحة فقط. لا تنفذ إجراءات إدارية أو مالية.</p>
+        <div class="assistant-controls">
+            <button type="button" id="assistant-voice" class="secondary-button">بدء الإملاء الصوتي</button>
+            <button type="button" id="assistant-fill-active" class="tool-button">املأ الحقل المحدد</button>
+        </div>
+        <label for="assistant-transcript">النص المسموع أو المكتوب</label>
+        <textarea id="assistant-transcript" rows="3" maxlength="2000"></textarea>
+        <p id="assistant-status" role="status" aria-live="polite"></p>
+    </aside>
 </body>
 </html>

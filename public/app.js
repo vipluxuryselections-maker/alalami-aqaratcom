@@ -58,6 +58,9 @@ let activeContractAsset = null;
 let ledgerItems = [];
 let selectedMarketFilter = 'all';
 let selectedMarketLocation = '';
+let smartSearchCriteria = null;
+let assistantTarget = null;
+let voiceRecognition = null;
 let mediaObjectUrls = [];
 let selectedMediaFiles = [];
 let pendingMediaListingId = null;
@@ -299,9 +302,250 @@ function updateCustomCategoryVisibility() {
   }
 }
 
+function normalizeSearchText(value) {
+  return normalizeArabicDigits(String(value || ''))
+    .toLocaleLowerCase('ar')
+    .replace(/[إأآ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/[\u064B-\u065F\u0670]/g, '');
+}
+
+function parseSmartSearch(value) {
+  let text = normalizeSearchText(value);
+  let minPrice = null;
+  let maxPrice = null;
+  const numericBudget = text.match(/(اقل من|دون|تحت|بحد اقصي|اكثر من|فوق|اعلي من)\s*([\d,]+)\s*(مليار|مليون|الف|ريال)?/);
+  if (numericBudget) {
+    const multiplier = { مليار: 1e9, مليون: 1e6, الف: 1e3, ريال: 1 }[numericBudget[3]] || 1;
+    const amount = Number(numericBudget[2].replace(/,/g, '')) * multiplier;
+    if (Number.isFinite(amount)) {
+      if (/^(اقل من|دون|تحت|بحد اقصي)$/.test(numericBudget[1])) maxPrice = amount;
+      else minPrice = amount;
+      text = text.replace(numericBudget[0], ' ');
+    }
+  } else if (/(اقل من|دون|تحت|بحد اقصي)/.test(text)) {
+    if (text.includes('مليار')) maxPrice = 1e9;
+    else if (text.includes('مليون')) maxPrice = 1e6;
+    else if (text.includes('الف')) maxPrice = 1e3;
+    if (maxPrice !== null) text = text.replace(/مليار|مليون|الف/g, ' ');
+  }
+  text = text.replace(/باقل من|اقل من|باكثر من|اكثر من|بحد اقصي|دون|تحت|فوق|اعلي من/g, ' ');
+
+  const ignored = new Set([
+    'في', 'من', 'على', 'عن', 'و', 'لل', 'اريد', 'ابحث', 'ابحثلي',
+    'اعرض', 'عرض', 'سعر', 'ريال', 'اقل', 'اكثر', 'من', 'دون', 'تحت',
+    'فوق', 'بحد', 'اقصي', 'اعلي', 'عقار', 'عقارات', 'مطلوب', 'للبيع',
+    'للشراء', 'ايجار', 'استثمار',
+  ]);
+  const terms = [...new Set(text.split(/[^\u0600-\u06FFa-z0-9]+/i)
+    .map((term) => term.replace(/^(?:لل|ال|و)/, '').replace(/[هة]$/, ''))
+    .filter((term) => term.length > 1 && !ignored.has(term))]
+  .map((term) => ({
+    alternatives: term === 'ارض' || term === 'اراضي' ? ['ارض', 'اراضي'] : [term],
+  }));
+  return { terms, minPrice, maxPrice };
+}
+
+function applySmartSearch() {
+  const input = document.getElementById('ai-search-input');
+  const status = document.getElementById('ai-search-status');
+  const query = input.value.trim();
+  if (!query) {
+    smartSearchCriteria = null;
+    status.textContent = 'أدخل وصفاً أو موقعاً أو ميزانية للبحث في الإعلانات المحمّلة.';
+    renderLedgerListings();
+    return;
+  }
+  smartSearchCriteria = parseSmartSearch(query);
+  selectedMarketLocation = '';
+  marketLocationSelect.value = '';
+  renderLedgerListings();
+  const budgets = [
+    smartSearchCriteria.minPrice !== null ? `من ${smartSearchCriteria.minPrice} ريال` : '',
+    smartSearchCriteria.maxPrice !== null ? `حتى ${smartSearchCriteria.maxPrice} ريال` : '',
+  ].filter(Boolean).join('، ');
+  status.textContent = `تم تطبيق تصفية محلية تقريبية${budgets ? ` (${budgets})` : ''}. النتائج من قاعدة البيانات الحالية وليست توصية استثمارية.`;
+  document.getElementById('listing-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+function updateSearchSuggestions() {
+  const suggestions = document.getElementById('ai-search-suggestions');
+  const values = new Set();
+  for (const item of ledgerItems) {
+    for (const value of [item.title, item.location, item.asset_category]) {
+      if (value) values.add(String(value));
+    }
+  }
+  suggestions.replaceChildren();
+  for (const value of [...values].slice(0, 100)) addSelectOption(suggestions, value, value);
+}
+
+function fillAssistantTarget(value) {
+  if (!(assistantTarget instanceof HTMLInputElement || assistantTarget instanceof HTMLTextAreaElement || assistantTarget instanceof HTMLSelectElement)) {
+    document.getElementById('assistant-status').textContent = 'حدد حقلاً نصياً أو قائمة في القسم المصرح لك باستخدامه أولاً.';
+    return false;
+  }
+  if (assistantTarget instanceof HTMLInputElement && ['password', 'file', 'hidden', 'checkbox', 'radio'].includes(assistantTarget.type)) {
+    document.getElementById('assistant-status').textContent = 'لا يُسمح بالإملاء في حقول الأسرار أو الملفات أو الأوامر الحساسة.';
+    return false;
+  }
+  if (assistantTarget instanceof HTMLSelectElement) {
+    const option = [...assistantTarget.options].find((entry) =>
+      normalizeSearchText(entry.textContent) === normalizeSearchText(value),
+    );
+    if (!option) {
+      document.getElementById('assistant-status').textContent = 'لم يطابق النص المنطوق أي خيار متاح في القائمة.';
+      return false;
+    }
+    assistantTarget.value = option.value;
+  } else {
+    assistantTarget.value = value.slice(0, Number(assistantTarget.maxLength) > 0 ? assistantTarget.maxLength : 2000);
+  }
+  assistantTarget.dispatchEvent(new Event('input', { bubbles: true }));
+  assistantTarget.dispatchEvent(new Event('change', { bubbles: true }));
+  document.getElementById('assistant-status').textContent = 'تم ملء الحقل المحدد؛ راجع المحتوى قبل الإرسال.';
+  return true;
+}
+
+function handleAssistantTranscript(value) {
+  const text = value.trim();
+  if (!text) return;
+  const searchCommand = text.match(/^(?:ابحث|بحث|اعرض نتائج البحث عن)\s+(.+)$/);
+  if (searchCommand) {
+    document.getElementById('ai-search-input').value = searchCommand[1];
+    applySmartSearch();
+    document.getElementById('assistant-status').textContent = 'تم تشغيل البحث المحلي؛ راجع النتائج قبل أي إجراء.';
+    return;
+  }
+  const sectionCommands = [
+    ['الإعلانات', 'listing-section'],
+    ['العقارات', 'listing-section'],
+    ['المنتجات', 'affiliate-section'],
+    ['التسويق بالعمولة', 'affiliate-section'],
+    ['الدردشة', 'chat-heading'],
+    ['البث', 'live-section'],
+    ['الموظفين', 'staff-section'],
+  ];
+  const normalized = normalizeSearchText(text);
+  const destination = sectionCommands.find(([phrase]) => normalized.includes(normalizeSearchText(phrase)));
+  if (/^(افتح|انتقل|اذهب)/.test(normalized) && destination) {
+    document.getElementById(destination[1]).scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('assistant-status').textContent = 'تم الانتقال داخل الصفحة فقط. لا تُنفّذ الأوامر الإدارية أو المالية صوتياً.';
+    return;
+  }
+  fillAssistantTarget(text);
+}
+
+function setupAiAssistant() {
+  const panel = document.getElementById('ai-assistant');
+  const transcript = document.getElementById('assistant-transcript');
+  const voiceButton = document.getElementById('assistant-voice');
+  const openButton = document.getElementById('ai-assistant-open');
+  document.addEventListener('focusin', (event) => {
+    if (!panel.contains(event.target) && event.target instanceof HTMLElement) {
+      assistantTarget = event.target;
+    }
+  });
+  const openAssistant = () => {
+    panel.hidden = false;
+    transcript.focus();
+  };
+  openButton.addEventListener('click', openAssistant);
+  document.getElementById('assistant-close').addEventListener('click', () => {
+    panel.hidden = true;
+    openButton.focus();
+  });
+  document.getElementById('assistant-fill-active').addEventListener('click', () =>
+    handleAssistantTranscript(transcript.value),
+  );
+  document.getElementById('ai-search-apply').addEventListener('click', applySmartSearch);
+  document.getElementById('ai-search-input').addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      applySmartSearch();
+    }
+  });
+  document.getElementById('ai-search-input').addEventListener('input', updateSearchSuggestions);
+  document.addEventListener('keydown', (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      document.getElementById('ai-search-input').focus();
+    } else if (event.altKey && event.key.toLowerCase() === 'a') {
+      event.preventDefault();
+      openAssistant();
+    }
+  });
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    voiceButton.disabled = true;
+    voiceButton.title = 'الإملاء الصوتي غير مدعوم في هذا المتصفح.';
+  } else {
+    voiceRecognition = new SpeechRecognition();
+    voiceRecognition.lang = 'ar-SA';
+    voiceRecognition.interimResults = false;
+    voiceRecognition.maxAlternatives = 1;
+    voiceRecognition.onresult = (event) => {
+      const spoken = event.results[0][0].transcript;
+      transcript.value = spoken;
+      handleAssistantTranscript(spoken);
+    };
+    voiceRecognition.onerror = (event) => {
+      document.getElementById('assistant-status').textContent =
+        `تعذر الإملاء الصوتي (${event.error}); تحقق من إذن الميكروفون.`;
+    };
+    voiceRecognition.onend = () => {
+      voiceButton.disabled = false;
+      voiceButton.textContent = 'بدء الإملاء الصوتي';
+    };
+    voiceButton.addEventListener('click', () => {
+      voiceButton.disabled = true;
+      voiceButton.textContent = 'جارٍ الاستماع...';
+      document.getElementById('assistant-status').textContent = 'يستمع المتصفح بعد إذنك؛ لا يُرفع الصوت إلى الخادم.';
+      voiceRecognition.start();
+    });
+  }
+
+  const handle = document.getElementById('assistant-drag-handle');
+  let drag = null;
+  handle.addEventListener('pointerdown', (event) => {
+    if (event.target.closest('button')) return;
+    const rect = panel.getBoundingClientRect();
+    drag = { x: event.clientX, y: event.clientY, left: rect.left, top: rect.top };
+    handle.setPointerCapture(event.pointerId);
+  });
+  handle.addEventListener('pointermove', (event) => {
+    if (!drag) return;
+    const left = Math.max(8, Math.min(window.innerWidth - panel.offsetWidth - 8, drag.left + event.clientX - drag.x));
+    const top = Math.max(8, Math.min(window.innerHeight - panel.offsetHeight - 8, drag.top + event.clientY - drag.y));
+    panel.style.left = `${left}px`;
+    panel.style.top = `${top}px`;
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
+  });
+  handle.addEventListener('pointerup', () => { drag = null; });
+  handle.addEventListener('pointercancel', () => { drag = null; });
+}
+
 function renderLedgerListings() {
   listingResults.replaceChildren();
   const filtered = ledgerItems.filter((item) => {
+    if (smartSearchCriteria) {
+      const searchable = normalizeSearchText([
+        item.title,
+        item.location,
+        item.asset_category,
+        item.item_type,
+        item.deal_type,
+        item.owner_type,
+      ].filter(Boolean).join(' '));
+      if (!smartSearchCriteria.terms.every((term) =>
+        term.alternatives.some((alternative) => searchable.includes(alternative)),
+      )) return false;
+      const price = Number(item.price || 0);
+      if (smartSearchCriteria.minPrice !== null && price < smartSearchCriteria.minPrice) return false;
+      if (smartSearchCriteria.maxPrice !== null && price > smartSearchCriteria.maxPrice) return false;
+    }
     if (
       selectedMarketLocation &&
       !String(item.location || '').includes(selectedMarketLocation)
@@ -440,6 +684,7 @@ async function loadLedgerListings() {
     }
 
     ledgerItems = data.items;
+    updateSearchSuggestions();
     renderLedgerListings();
   } catch (error) {
     console.error('Ledger listing request failed:', error);
@@ -1982,6 +2227,12 @@ function renderProducts(products) {
     commission.textContent = product.commissionType === 'percent'
       ? `عمولة المسوق: ${formatter.format(Number(product.commissionValue))}%`
       : `عمولة المسوق: ${formatter.format(Number(product.commissionValue))} ريال`;
+    const grossCommission = product.commissionType === 'percent'
+      ? Number(product.price) * Number(product.commissionValue) / 100
+      : Number(product.commissionValue);
+    const platformShare = document.createElement('p');
+    platformShare.textContent =
+      `حصة المنصة التقديرية من العمولة: ${formatter.format(grossCommission * Number(product.platformCommissionPercent || 0) / 100)} ريال`;
     const stock = document.createElement('p');
     stock.textContent = `المخزون: ${formatter.format(product.stockQuantity)} · البائع: ${product.sellerName}`;
     const description = document.createElement('p');
@@ -1991,6 +2242,8 @@ function renderProducts(products) {
       product.sizes?.length ? `المقاسات: ${product.sizes.join('، ')}` : '',
       product.colors?.length ? `الألوان: ${product.colors.join('، ')}` : '',
       `الشحن: ${(product.shippingOptions || []).join('، ')}`,
+      product.shippingCarriers?.length ? `شركات التوصيل: ${product.shippingCarriers.join('، ')}` : '',
+      product.paymentOptions?.length ? `الدفع لدى التاجر: ${product.paymentOptions.join('، ')}` : '',
     ].filter(Boolean).join(' · ');
     const actions = document.createElement('div');
     actions.className = 'product-actions';
@@ -2016,7 +2269,18 @@ function renderProducts(products) {
     meeting.textContent = 'اجتماع مرئي';
     meeting.addEventListener('click', () => createSellerMeeting(product));
     actions.append(phone, whatsapp, message, meeting);
-    card.append(gallery, category, title, price, commission, stock, variations, description, actions);
+    const sellerPage = document.createElement('a');
+    sellerPage.className = 'tool-button';
+    sellerPage.href = `/seller.html?id=${encodeURIComponent(product.id)}`;
+    sellerPage.textContent = 'صفحة التاجر';
+    actions.append(sellerPage);
+    const storeLink = createExternalLink('زيارة متجر التاجر', product.sellerStoreUrl);
+    if (storeLink) actions.append(storeLink);
+    for (const [index, profileUrl] of (product.socialLinks || []).entries()) {
+      const profileLink = createExternalLink(`حساب التاجر ${index + 1}`, profileUrl);
+      if (profileLink) actions.append(profileLink);
+    }
+    card.append(gallery, category, title, price, commission, platformShare, stock, variations, description, actions);
     results.append(card);
   }
 }
@@ -2098,6 +2362,11 @@ async function submitAffiliateProduct(event) {
     colors: document.getElementById('product-colors').value.split(',').map((value) => value.trim()).filter(Boolean),
     stockQuantity: Number(document.getElementById('product-stock').value),
     shippingOptions: [...document.querySelectorAll('[name="product-shipping"]:checked')].map((input) => input.value),
+    shippingCarriers: [...document.querySelectorAll('[name="product-carrier"]:checked')].map((input) => input.value),
+    paymentOptions: [...document.querySelectorAll('[name="product-payment"]:checked')].map((input) => input.value),
+    sellerStoreUrl: document.getElementById('product-store-url').value.trim(),
+    socialLinks: document.getElementById('product-social-links').value.split(',').map((value) => value.trim()).filter(Boolean),
+    platformCommissionPercent: Number(document.getElementById('product-platform-share').value),
     sellerName: document.getElementById('product-seller-name').value.trim(),
     sellerPhone: document.getElementById('product-seller-phone').value.trim(),
     images,
@@ -2880,6 +3149,7 @@ loadPartners();
 loadPlatformInfo();
 loadLedgerListings();
 checkApiHealth();
+setupAiAssistant();
 document.getElementById('analyze-listing').addEventListener('click', analyzeListingText);
 careerForm.addEventListener('submit', submitCareerApplication);
 document.getElementById('staff-create-form').addEventListener('submit', submitStaffAccount);
@@ -2984,6 +3254,34 @@ document.querySelectorAll('[data-market-filter]').forEach((button) => {
 marketLocationSelect.addEventListener('input', () => {
   selectedMarketLocation = marketLocationSelect.value.split('/').pop().trim();
   renderLedgerListings();
+});
+document.getElementById('listing-use-gps').addEventListener('click', () => {
+  const status = listingStatus;
+  if (!navigator.geolocation) {
+    status.textContent = 'تحديد الموقع الجغرافي غير مدعوم في هذا المتصفح.';
+    status.dataset.state = 'error';
+    return;
+  }
+  status.textContent = 'سيطلب المتصفح إذنك للوصول إلى موقع الجهاز الحالي.';
+  status.dataset.state = 'pending';
+  navigator.geolocation.getCurrentPosition(
+    ({ coords }) => {
+      document.getElementById('listing-latitude').value = String(coords.latitude);
+      document.getElementById('listing-longitude').value = String(coords.longitude);
+      document.getElementById('listing-location').value =
+        `موقع يحدده المستخدم (${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)})`;
+      status.textContent = 'تم إدراج إحداثيات موقعك الحالي بعد موافقتك. راجعها قبل الحفظ.';
+      status.dataset.state = 'success';
+    },
+    (error) => {
+      console.warn('Geolocation request failed:', error);
+      status.textContent = error.code === error.PERMISSION_DENIED
+        ? 'لم يُسمح بالوصول إلى الموقع؛ لم تُحفظ إحداثيات.'
+        : 'تعذر تحديد الموقع. اختر المدينة يدوياً أو أعد المحاولة.';
+      status.dataset.state = 'error';
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+  );
 });
 mediaInput.addEventListener('change', () => showMediaPreview(mediaInput.files));
 mediaDropZone.addEventListener('dragover', (event) => {

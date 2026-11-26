@@ -91,6 +91,72 @@ textarea:focus {
     max-width: 180px;
 }
 
+.ai-search-controls,
+.assistant-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.ai-search-controls input {
+    flex: 1 1 280px;
+}
+
+.ai-search-controls button {
+    margin-top: 4px;
+}
+
+.floating-assistant {
+    position: fixed;
+    inset-inline-end: 20px;
+    bottom: 20px;
+    z-index: 1001;
+    width: min(360px, calc(100vw - 24px));
+    padding: 14px;
+    border: 1px solid var(--primary);
+    border-radius: 14px;
+    background: #111a28;
+    box-shadow: 0 16px 48px rgb(0 0 0 / 45%);
+}
+
+.assistant-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: move;
+    touch-action: none;
+}
+
+.assistant-header button {
+    margin: 0;
+}
+
+.floating-assistant textarea {
+    min-height: 78px;
+}
+
+.floating-assistant [role="status"] {
+    min-height: 1.5em;
+    margin: 8px 0 0;
+}
+
+.site-footer {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    padding: 20px 12px;
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+}
+
+.site-footer a {
+    color: #f3e5ab;
+}
+
 .staff-results {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));

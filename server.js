@@ -10,6 +10,7 @@ const http = require('node:http');
 const path = require('node:path');
 const { Pool } = require('pg');
 const { Server } = require('socket.io');
+const nodemailer = require('nodemailer');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -34,8 +35,29 @@ const developerAlertToken = process.env.DEVELOPER_ALERT_TOKEN;
 const complianceBypassToken = process.env.COMPLIANCE_BYPASS_TOKEN;
 const platformAdminToken = process.env.PLATFORM_ADMIN_TOKEN;
 const superAdminToken = process.env.SUPER_ADMIN_TOKEN;
+const securityAlertEmail = process.env.SECURITY_ALERT_EMAIL;
+const smtpHost = process.env.SMTP_HOST;
+const smtpPort = Number(process.env.SMTP_PORT || 587);
+const smtpUser = process.env.SMTP_USER;
+const smtpPassword = process.env.SMTP_PASSWORD;
+const smtpFrom = process.env.SMTP_FROM || smtpUser;
+const securityAlertTransport =
+  smtpHost && smtpUser && smtpPassword && smtpFrom && securityAlertEmail &&
+  Number.isInteger(smtpPort) && smtpPort > 0 && smtpPort <= 65535
+    ? nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: { user: smtpUser, pass: smtpPassword },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 10000,
+      })
+    : null;
 const scrypt = promisify(crypto.scrypt);
 const staffSessions = new Map();
+const securityAlertLastSent = new Map();
+let securityEmailConfigurationWarningLogged = false;
 const staffSessionLifetimeMs = 8 * 60 * 60 * 1000;
 const liveRooms = new Map();
 const liveRoomLifetimeMs = 2 * 60 * 60 * 1000;
@@ -61,6 +83,20 @@ const productShippingOptions = Object.freeze([
   'توصيل فوري',
   'شحن سريع لجميع مناطق المملكة',
   'استلام من الفرع',
+]);
+const productShippingCarriers = Object.freeze([
+  'أرامكس',
+  'سمسا',
+  'DHL',
+  'زاجل',
+  'مندوب فوري',
+]);
+const productPaymentOptions = Object.freeze([
+  'مدى',
+  'Visa',
+  'Apple Pay',
+  'تابي',
+  'تمارا',
 ]);
 const suspiciousWords = [
   'رقمي',
@@ -278,6 +314,12 @@ async function initializeSuperAppTables() {
       colors TEXT[] NOT NULL DEFAULT '{}',
       stock_quantity INT NOT NULL DEFAULT 0 CHECK (stock_quantity >= 0),
       shipping_options TEXT[] NOT NULL,
+      shipping_carriers TEXT[] NOT NULL DEFAULT '{}',
+      payment_options TEXT[] NOT NULL DEFAULT '{}',
+      seller_store_url VARCHAR(2048),
+      social_links TEXT[] NOT NULL DEFAULT '{}',
+      platform_commission_percent NUMERIC(5, 2) NOT NULL DEFAULT 0
+        CHECK (platform_commission_percent >= 0 AND platform_commission_percent <= 100),
       seller_name VARCHAR(100) NOT NULL,
       seller_phone VARCHAR(50) NOT NULL,
       is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -305,7 +347,22 @@ async function initializeSuperAppTables() {
       payouts_executed BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS security_events (
+      id BIGSERIAL PRIMARY KEY,
+      event_type VARCHAR(80) NOT NULL,
+      request_method VARCHAR(10) NOT NULL,
+      request_path VARCHAR(255) NOT NULL,
+      remote_address VARCHAR(100) NOT NULL,
+      user_agent VARCHAR(300) NOT NULL DEFAULT '',
+      details JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS security_events_created_at_idx
+      ON security_events (created_at DESC);
   `);
+  await databasePool.query(
+    `DELETE FROM security_events WHERE created_at < CURRENT_TIMESTAMP - INTERVAL '90 days'`,
+  );
   await databasePool.query(
     'ALTER TABLE office_ledger ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(50)',
   );
@@ -321,6 +378,14 @@ async function initializeSuperAppTables() {
       ADD COLUMN IF NOT EXISTS longitude NUMERIC(10, 7),
       ADD COLUMN IF NOT EXISTS media_upload_token_hash VARCHAR(64),
       ADD COLUMN IF NOT EXISTS owner_type VARCHAR(100)
+  `);
+  await databasePool.query(`
+    ALTER TABLE affiliate_products
+      ADD COLUMN IF NOT EXISTS shipping_carriers TEXT[] NOT NULL DEFAULT '{}',
+      ADD COLUMN IF NOT EXISTS payment_options TEXT[] NOT NULL DEFAULT '{}',
+      ADD COLUMN IF NOT EXISTS seller_store_url VARCHAR(2048),
+      ADD COLUMN IF NOT EXISTS social_links TEXT[] NOT NULL DEFAULT '{}',
+      ADD COLUMN IF NOT EXISTS platform_commission_percent NUMERIC(5, 2) NOT NULL DEFAULT 0
   `);
   await databasePool.query(
     `DELETE FROM vip_stories
@@ -354,6 +419,76 @@ async function getDatabaseOrRespond(res) {
   }
 
   return databasePool;
+}
+
+async function recordSecurityEvent(req, eventType, details = {}) {
+  const remoteAddress = String(req.ip || 'unknown').slice(0, 100);
+  const event = {
+    eventType,
+    method: String(req.method || '').slice(0, 10),
+    path: String(req.path || '').slice(0, 255),
+    remoteAddress,
+    userAgent: String(req.get('user-agent') || '').slice(0, 300),
+    details,
+  };
+  if (databasePool) {
+    try {
+      await databasePool.query(
+        `INSERT INTO security_events
+           (event_type, request_method, request_path, remote_address, user_agent, details)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+        [
+          event.eventType,
+          event.method,
+          event.path,
+          event.remoteAddress,
+          event.userAgent,
+          JSON.stringify(event.details),
+        ],
+      );
+    } catch (error) {
+      console.error('Failed to persist security event:', error.message);
+    }
+  }
+
+  if (!securityAlertTransport) {
+    if (!securityEmailConfigurationWarningLogged) {
+      console.error(
+        'Security event email alerts are disabled; configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM, and SECURITY_ALERT_EMAIL.',
+      );
+      securityEmailConfigurationWarningLogged = true;
+    }
+    return;
+  }
+
+  const now = Date.now();
+  const alertKey = `${event.eventType}:${event.remoteAddress}`;
+  for (const [key, sentAt] of securityAlertLastSent) {
+    if (sentAt <= now - 10 * 60 * 1000) securityAlertLastSent.delete(key);
+  }
+  if ((securityAlertLastSent.get(alertKey) || 0) > now - 10 * 60 * 1000) return;
+  securityAlertLastSent.set(alertKey, now);
+  if (securityAlertLastSent.size > 1000) {
+    const oldestKey = securityAlertLastSent.keys().next().value;
+    if (oldestKey) securityAlertLastSent.delete(oldestKey);
+  }
+
+  try {
+    await securityAlertTransport.sendMail({
+      from: smtpFrom,
+      to: securityAlertEmail,
+      subject: `تنبيه أمني: ${event.eventType}`,
+      text: [
+        `نوع الحدث: ${event.eventType}`,
+        `الطلب: ${event.method} ${event.path}`,
+        `عنوان الشبكة: ${event.remoteAddress}`,
+        `المتصفح: ${event.userAgent || 'غير متاح'}`,
+        `تفاصيل غير سرية: ${JSON.stringify(event.details)}`,
+      ].join('\n'),
+    });
+  } catch (error) {
+    console.error('Failed to email security event alert:', error.message);
+  }
 }
 
 const io = new Server(server, {
@@ -409,6 +544,24 @@ app.use(
     limit: process.env.NODE_ENV === 'test' ? 1000 : 60,
     standardHeaders: true,
     legacyHeaders: false,
+  }),
+);
+app.use(
+  '/api/admin',
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    skipSuccessfulRequests: true,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler(req, res, next, options) {
+      void recordSecurityEvent(req, 'admin_rate_limit_exceeded');
+      res.status(options.statusCode).json({
+        success: false,
+        code: 'ADMIN_RATE_LIMITED',
+        message: 'تم إيقاف محاولات الإدارة مؤقتاً بعد تكرار محاولات غير مصرح بها.',
+      });
+    },
   }),
 );
 
@@ -469,6 +622,16 @@ function isValidStringList(value, maxLength, maxItems = 20) {
     value.length <= maxItems &&
     value.every((item) => isNonEmptyString(item, maxLength))
   );
+}
+
+function isValidHttpsUrl(value, optional = false) {
+  if (optional && (value === undefined || value === null || value === '')) return true;
+  if (!isNonEmptyString(value, 2048)) return false;
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 function isNonEmptyString(value, maxLength) {
@@ -1580,6 +1743,11 @@ app.get('/api/products', async (req, res) => {
               product.commission_value AS "commissionValue", product.sizes,
               product.colors, product.stock_quantity AS "stockQuantity",
               product.shipping_options AS "shippingOptions",
+              product.shipping_carriers AS "shippingCarriers",
+              product.payment_options AS "paymentOptions",
+              product.seller_store_url AS "sellerStoreUrl",
+              product.social_links AS "socialLinks",
+              product.platform_commission_percent AS "platformCommissionPercent",
               product.seller_name AS "sellerName", product.seller_phone AS "sellerPhone",
               product.created_at AS "createdAt",
               COALESCE((
@@ -1668,6 +1836,11 @@ app.post(
       colors = [],
       stockQuantity,
       shippingOptions,
+      shippingCarriers = [],
+      paymentOptions = [],
+      sellerStoreUrl = '',
+      socialLinks = [],
+      platformCommissionPercent,
       sellerName,
       sellerPhone,
       images = [],
@@ -1703,6 +1876,16 @@ app.post(
       !isValidStringList(shippingOptions, 60, productShippingOptions.length) ||
       shippingOptions.length === 0 ||
       shippingOptions.some((option) => !productShippingOptions.includes(option)) ||
+      !isValidStringList(shippingCarriers, 60, productShippingCarriers.length) ||
+      shippingCarriers.some((option) => !productShippingCarriers.includes(option)) ||
+      !isValidStringList(paymentOptions, 60, productPaymentOptions.length) ||
+      paymentOptions.some((option) => !productPaymentOptions.includes(option)) ||
+      !isValidStringList(socialLinks, 2048, 20) ||
+      socialLinks.some((url) => !isValidHttpsUrl(url)) ||
+      !isValidHttpsUrl(sellerStoreUrl, true) ||
+      !Number.isFinite(platformCommissionPercent) ||
+      platformCommissionPercent < 0 ||
+      platformCommissionPercent > 100 ||
       !isNonEmptyString(sellerName, 100) ||
       !validPhone ||
       preparedImages === null
@@ -1723,8 +1906,9 @@ app.post(
         `INSERT INTO affiliate_products
            (name, category, custom_category, description, price,
             commission_type, commission_value, sizes, colors, stock_quantity,
-            shipping_options, seller_name, seller_phone)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            shipping_options, shipping_carriers, payment_options, seller_store_url,
+            social_links, platform_commission_percent, seller_name, seller_phone)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
          RETURNING id`,
         [
           name.trim(),
@@ -1738,6 +1922,11 @@ app.post(
           colors.map((value) => value.trim()),
           stockQuantity,
           shippingOptions,
+          shippingCarriers,
+          paymentOptions,
+          sellerStoreUrl || null,
+          socialLinks,
+          platformCommissionPercent,
           sellerName.trim(),
           sellerPhone.trim(),
         ],

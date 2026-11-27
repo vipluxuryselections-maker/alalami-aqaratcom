@@ -3,15 +3,14 @@
   let brokers = [{ name: '', license: '', iban: '', share: 100 }];
 
   function injectUnifiedDealRoom() {
-    const target = document.querySelector('main') || document.body;
+    if (document.getElementById('vip-deal-room-hub')) return;
+    const target = document.querySelector('main') || document.querySelector('.container') || document.body;
     if (!target) return;
-    const old = document.getElementById('vip-deal-room-hub');
-    if (old) old.remove();
 
     const section = document.createElement('section');
     section.id = 'vip-deal-room-hub';
     section.className = 'section-box';
-    section.style.cssText = 'border: 2px solid #d4af37; border-radius: 14px; padding: 18px; margin: 18px auto; background: rgba(15, 23, 42, 0.96); color: #f8fafc;';
+    section.style.cssText = 'border: 2px solid #d4af37; border-radius: 14px; padding: 18px; margin: 18px auto; max-width: 1180px; background: rgba(15, 23, 42, 0.96); color: #f8fafc;';
     section.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:1px solid #334155; padding-bottom:12px;">
         <div>

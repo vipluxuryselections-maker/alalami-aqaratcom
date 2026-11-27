@@ -1,4 +1,4 @@
-﻿(function () {
+﻿﻿(function () {
   let platformRate = 0.01; // 1% مبدئياً ثم يرفع إلى 2.5%
 
   function injectUnifiedDealRoom() {

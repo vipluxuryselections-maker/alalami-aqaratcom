@@ -1,4 +1,4 @@
-﻿﻿(function () {
+﻿﻿﻿(function () {
   function injectAffiliatePartnersAndPrivacy() {
     const affiliateTarget = document.getElementById('affiliate-marketplace') || document.querySelector('main') || document.body;
     if (affiliateTarget && !document.getElementById('vip-global-affiliates')) {
